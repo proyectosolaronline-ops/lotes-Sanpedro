@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=yes">
+  <title>Registro de Lotes en Venta</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+      background: #eef2f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 12px;
+    }
+    .container {
+      width: 100%;
+      max-width: 560px;
+      background: white;
+      border-radius: 28px;
+      box-shadow: 0 20px 35px rgba(0, 0, 0, 0.1);
+      padding: 20px 18px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    h1 {
+      font-size: 1.7rem;
+      font-weight: 650;
+      color: #1e3b2f;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    h1 span {
+      background: #2c5e3b;
+      color: white;
+      font-size: 0.75rem;
+      padding: 4px 12px;
+      border-radius: 30px;
+      font-weight: 500;
+      letter-spacing: 0.3px;
+    }
+    #map {
+      height: 280px;
+      border-radius: 20px;
+      border: 1px solid #dce5e0;
+      background: #e9f0ec;
+      z-index: 1;
+    }
+    .coord-preview {
+      background: #f9fbfa;
+      border: 1px dashed #bcd0c4;
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-size: 0.9rem;
+      color: #2b4b38;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .coord-preview strong {
+      font-weight: 600;
+      background: #e4f0e9;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+    }
+    button {
+      background: #2c5e3b;
+      border: none;
+      color: white;
+      font-weight: 600;
+      padding: 12px 18px;
+      border-radius: 30px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: 1px solid #1e4628;
+    }
+    button:active {
+      transform: scale(0.97);
+      background: #1e4628;
+    }
+    button.secondary {
+      background: white;
+      color: #2c5e3b;
+      border: 1px solid #2c5e3b;
+    }
+    button.danger {
+      background: #b53b3b;
+      border-color: #8f2c2c;
+    }
+    .form-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #3b4f42;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-left: 6px;
+    }
+    input, select {
+      padding: 14px 14px;
+      border-radius: 16px;
+      border: 1px solid #dde7e1;
+      background: #fafcfb;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border 0.2s;
+    }
+    input:focus, select:focus {
+      border-color: #2c5e3b;
+      box-shadow: 0 0 0 3px rgba(44,94,59,0.1);
+    }
+    .row-2 {
+      display: flex;
+      gap: 10px;
+    }
+    .row-2 > div {
+      flex: 1;
+    }
+    .actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 6px;
+    }
+    .divider {
+      border-top: 1px solid #dfe8e2;
+      margin: 6px 0 2px;
+    }
+    .config-section {
+      background: #f3f7f4;
+      border-radius: 18px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .status-message {
+      font-size: 0.8rem;
+      color: #2c5e3b;
+      background: #e4f0e9;
+      padding: 6px 12px;
+      border-radius: 30px;
+      text-align: center;
+    }
+    hr {
+      border: 0.5px solid #d0ddd3;
+      margin: 4px 0;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>
+    📍 Lotes en Venta
+    <span>Registro</span>
+  </h1>
+
+  <!-- MAPA -->
+  <div id="map"></div>
+
+  <!-- CONFIRMACIÓN DE UBICACIÓN -->
+  <div class="coord-preview" id="coordBox">
+    <span>📍 <strong id="latDisplay">--</strong> , <strong id="lngDisplay">--</strong></span>
+    <button id="confirmLocationBtn" class="secondary" disabled>✅ Confirmar ubicación</button>
+  </div>
+  <div style="font-size:0.75rem; color:#5f6b63; margin-top:-8px; margin-left:6px;">
+    Toca el mapa para seleccionar, luego confirma.
+  </div>
+
+  <!-- FORMULARIO -->
+  <div class="form-grid">
+    <div class="field">
+      <label>Nombre / código lote</label>
+      <input type="text" id="nombre" placeholder="Ej: Lote A-12" autocomplete="off">
+    </div>
+
+    <div class="row-2">
+      <div class="field">
+        <label>Tipo de pago</label>
+        <select id="tipoPago">
+          <option value="contado">Contado</option>
+          <option value="financiado">Financiado</option>
+          <option value="credito">Crédito</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Estado</label>
+        <select id="estado">
+          <option value="disponible">Disponible</option>
+          <option value="reservado">Reservado</option>
+          <option value="vendido">Vendido</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row-2">
+      <div class="field">
+        <label>Valor ($)</label>
+        <input type="number" id="valor" placeholder="0" min="0" step="any">
+      </div>
+      <div class="field">
+        <label>Metros</label>
+        <input type="number" id="metros" placeholder="m²" min="0" step="any">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Medida (ej: 10x20)</label>
+      <input type="text" id="medida" placeholder="10x20">
+    </div>
+
+    <!-- Lat/Lng ocultos pero funcionales -->
+    <input type="hidden" id="lat" value="">
+    <input type="hidden" id="lng" value="">
+    <input type="hidden" id="fecha" value="">
+
+    <div class="actions">
+      <button id="saveBtn">💾 Guardar lote</button>
+      <button id="clearBtn" class="secondary">🧹 Limpiar</button>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- CONFIGURACIÓN -->
+  <div class="config-section">
+    <label style="margin-left:2px;">⚙️ URL del Apps Script</label>
+    <input type="url" id="apiUrl" placeholder="https://script.google.com/macros/s/.../exec">
+    <button id="saveUrlBtn" class="secondary" style="align-self: flex-start;">Guardar URL</button>
+    <div id="configStatus" class="status-message">🔌 Ingresa la URL para conectar.</div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    // ---------- MAPA ----------
+    const map = L.map('map', {
+      center: [4.7109, -74.0721], // Bogotá aprox
+      zoom: 12,
+      attributionControl: true,
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(map);
+
+    let selectedLat = null;
+    let selectedLng = null;
+    let tempMarker = null;
+
+    const latDisplay = document.getElementById('latDisplay');
+    const lngDisplay = document.getElementById('lngDisplay');
+    const confirmBtn = document.getElementById('confirmLocationBtn');
+    const latInput = document.getElementById('lat');
+    const lngInput = document.getElementById('lng');
+
+    function updateCoordDisplay(lat, lng) {
+      latDisplay.textContent = lat.toFixed(6);
+      lngDisplay.textContent = lng.toFixed(6);
+      confirmBtn.disabled = false;
+    }
+
+    function clearTempSelection() {
+      if (tempMarker) {
+        map.removeLayer(tempMarker);
+        tempMarker = null;
+      }
+      selectedLat = null;
+      selectedLng = null;
+      latDisplay.textContent = '--';
+      lngDisplay.textContent = '--';
+      confirmBtn.disabled = true;
+    }
+
+    map.on('click', function(e) {
+      const { lat, lng } = e.latlng;
+      // Remover marcador temporal anterior
+      if (tempMarker) map.removeLayer(tempMarker);
+      
+      tempMarker = L.marker([lat, lng], {
+        draggable: false,
+        icon: L.divIcon({
+          className: 'temp-marker',
+          html: '<div style="background:#2c5e3b;color:white;padding:4px 8px;border-radius:20px;font-weight:bold;font-size:0.8rem;">📍</div>',
+          iconSize: [28, 28],
+          iconAnchor: [14, 14]
+        })
+      }).addTo(map);
+
+      selectedLat = lat;
+      selectedLng = lng;
+      updateCoordDisplay(lat, lng);
+    });
+
+    // Confirmar ubicación
+    confirmBtn.addEventListener('click', function() {
+      if (selectedLat === null || selectedLng === null) {
+        alert('Primero selecciona un punto en el mapa.');
+        return;
+      }
+      latInput.value = selectedLat.toFixed(7);
+      lngInput.value = selectedLng.toFixed(7);
+      document.getElementById('fecha').value = new Date().toISOString();
+      
+      // Pequeña retroalimentación visual
+      confirmBtn.textContent = '✅ Ubicación confirmada';
+      setTimeout(() => {
+        confirmBtn.textContent = '✅ Confirmar ubicación';
+      }, 1200);
+      
+      // Dejar marcador definitivo (podemos cambiar estilo)
+      if (tempMarker) {
+        map.removeLayer(tempMarker);
+        L.marker([selectedLat, selectedLng], {
+          icon: L.icon({
+            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41]
+          })
+        }).addTo(map).bindPopup('Ubicación confirmada').openPopup();
+        tempMarker = null;
+      }
+      console.log('Ubicación confirmada:', selectedLat, selectedLng);
+    });
+
+    // ---------- PERSISTENCIA URL ----------
+    const apiUrlInput = document.getElementById('apiUrl');
+    const saveUrlBtn = document.getElementById('saveUrlBtn');
+    const configStatus = document.getElementById('configStatus');
+
+    function loadStoredUrl() {
+      const stored = localStorage.getItem('googleScriptApiUrl');
+      if (stored) {
+        apiUrlInput.value = stored;
+        configStatus.textContent = '✅ URL cargada automáticamente.';
+      }
+    }
+    loadStoredUrl();
+
+    saveUrlBtn.addEventListener('click', function() {
+      const url = apiUrlInput.value.trim();
+      if (!url) {
+        configStatus.textContent = '❌ Ingresa una URL válida.';
+        return;
+      }
+      localStorage.setItem('googleScriptApiUrl', url);
+      configStatus.textContent = '✅ URL guardada correctamente.';
+    });
+
+    // ---------- GUARDAR LOTE ----------
+    const saveBtn = document.getElementById('saveBtn');
+    const clearBtn = document.getElementById('clearBtn');
+
+    function collectFormData() {
+      return {
+        nombre: document.getElementById('nombre').value.trim(),
+        tipoPago: document.getElementById('tipoPago').value,
+        estado: document.getElementById('estado').value,
+        valor: parseFloat(document.getElementById('valor').value) || 0,
+        metros: parseFloat(document.getElementById('metros').value) || 0,
+        medida: document.getElementById('medida').value.trim(),
+        lat: parseFloat(latInput.value) || 0,
+        lng: parseFloat(lngInput.value) || 0,
+        fecha: document.getElementById('fecha').value || new Date().toISOString()
+      };
+    }
+
+    function validateData(data) {
+      if (!data.nombre) return 'Falta el nombre del lote.';
+      if (!data.lat || !data.lng) return 'Confirma la ubicación en el mapa.';
+      if (isNaN(data.valor)) return 'Valor inválido.';
+      return null;
+    }
+
+    saveBtn.addEventListener('click', async function() {
+      const data = collectFormData();
+      const error = validateData(data);
+      if (error) {
+        alert(error);
+        return;
+      }
+
+      const apiUrl = localStorage.getItem('googleScriptApiUrl');
+      if (!apiUrl) {
+        alert('Primero guarda la URL del Apps Script en la configuración.');
+        return;
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = '⏳ Guardando...';
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          mode: 'no-cors', // Necesario para evitar CORS con Apps Script (devuelve opaco)
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        // Con no-cors no podemos leer respuesta, asumimos éxito si no hay excepción
+        alert('✅ Lote guardado correctamente (verifica tu hoja).');
+        clearForm();
+      } catch (err) {
+        console.error(err);
+        alert('❌ Error de red al guardar. Revisa conexión e intenta de nuevo.');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = '💾 Guardar lote';
+      }
+    });
+
+    function clearForm() {
+      document.getElementById('nombre').value = '';
+      document.getElementById('valor').value = '';
+      document.getElementById('metros').value = '';
+      document.getElementById('medida').value = '';
+      document.getElementById('tipoPago').value = 'contado';
+      document.getElementById('estado').value = 'disponible';
+      latInput.value = '';
+      lngInput.value = '';
+      document.getElementById('fecha').value = '';
+      clearTempSelection();
+      // También removemos cualquier marcador extra (simple)
+      map.eachLayer(layer => {
+        if (layer instanceof L.Marker && layer !== tempMarker) {
+          map.removeLayer(layer);
+        }
+      });
+      confirmBtn.disabled = true;
+      latDisplay.textContent = '--';
+      lngDisplay.textContent = '--';
+    }
+
+    clearBtn.addEventListener('click', clearForm);
+
+    // Ajustar mapa al cargar
+    setTimeout(() => map.invalidateSize(), 200);
+  })();
+</script>
+</body>
+</html>
