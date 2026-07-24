@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visor de Lotes en Venta</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root{
+    --ink:#1B2A4A;
+    --ink-soft:#334268;
+    --paper:#F5F3EE;
+    --paper-line:#E4E0D6;
+    --ochre:#C89B3C;
+    --ok:#3E7A4C;
+    --sold:#8A2B2B;
+    --held:#B8842B;
+    --legal:#5B4B8A;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; font-family:'Inter', sans-serif; background:var(--paper); color:var(--ink); }
+  header{
+    display:flex; align-items:baseline; justify-content:space-between;
+    padding:14px 20px; border-bottom:2px solid var(--ink); background:var(--paper);
+    flex-wrap:wrap; gap:8px; position:sticky; top:0; z-index:1000;
+  }
+  header h1{ font-family:'Fraunces', serif; font-size:1.25rem; font-weight:700; margin:0; }
+  header .stamp{
+    font-family:'JetBrains Mono', monospace; font-size:.68rem; color:var(--ink-soft);
+    border:1px solid var(--ink-soft); padding:4px 10px; border-radius:2px;
+    text-transform:uppercase; letter-spacing:1px; white-space:nowrap;
+  }
+  .layout{ display:grid; grid-template-columns:1fr 340px; min-height:calc(100vh - 60px); }
+  #map{ height:100%; min-height:520px; border-right:2px solid var(--ink); }
+  .panel{ padding:20px 22px; overflow-y:auto; max-height:calc(100vh - 60px); }
+  .card{
+    background:#fff; border:1px solid var(--paper-line); border-radius:4px;
+    padding:16px 18px; margin-bottom:18px; position:relative;
+  }
+  .card::before{
+    content:attr(data-tag); position:absolute; top:-10px; left:14px;
+    background:var(--ink); color:var(--paper); font-family:'JetBrains Mono', monospace;
+    font-size:.62rem; letter-spacing:1px; padding:2px 8px; border-radius:2px;
+  }
+  .legend{ display:flex; flex-wrap:wrap; gap:10px; }
+  .legend .item{ display:flex; align-items:center; gap:6px; font-size:.76rem; color:var(--ink-soft); cursor:pointer; user-select:none; }
+  .legend .item.off{ opacity:.35; }
+  .dot{ width:11px; height:11px; border-radius:50%; display:inline-block; border:1px solid rgba(0,0,0,.2); }
+  .dot.ok{background:var(--ok);} .dot.sold{background:var(--sold);}
+  .dot.held{background:var(--held);} .dot.legal{background:var(--legal);}
+  input[type=text]{
+    width:100%; padding:9px 11px; border:1px solid var(--paper-line); border-radius:3px;
+    font-family:'Inter', sans-serif; font-size:.88rem; background:var(--paper); color:var(--ink);
+  }
+  input:focus{ outline:2px solid var(--ochre); outline-offset:1px; background:#fff; }
+  label{
+    display:block; font-size:.68rem; text-transform:uppercase; letter-spacing:.6px;
+    color:var(--ink-soft); margin:0 0 6px; font-weight:600;
+  }
+  .hint{ font-size:.74rem; color:var(--ink-soft); margin:8px 0 0; font-style:italic; }
+  #lista{ display:flex; flex-direction:column; gap:8px; max-height:340px; overflow-y:auto; }
+  .lote-item{
+    border:1px solid var(--paper-line); border-radius:3px; padding:9px 11px;
+    cursor:pointer; font-size:.8rem; display:flex; justify-content:space-between; align-items:center; gap:8px;
+  }
+  .lote-item:hover{ border-color:var(--ink); }
+  .lote-item b{ font-family:'Fraunces', serif; font-weight:500; display:block; }
+  .lote-item small{ color:var(--ink-soft); }
+  .badge{
+    font-family:'JetBrains Mono', monospace; font-size:.6rem; padding:3px 7px;
+    border-radius:10px; color:#fff; white-space:nowrap; text-transform:uppercase;
+  }
+  .leaflet-popup-content{ font-family:'Inter', sans-serif; font-size:.85rem; }
+  .leaflet-popup-content b{ font-family:'Fraunces', serif; }
+  #empty-msg{ font-size:.82rem; color:var(--ink-soft); text-align:center; padding:20px 0; display:none; }
+  #fab-admin{
+    position:fixed;
+    bottom:22px;
+    right:22px;
+    z-index:1200;
+    display:none; /* solo se muestra si el correo está autorizado */
+    align-items:center;
+    gap:8px;
+    padding:13px 18px;
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    border-radius:30px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:.78rem;
+    letter-spacing:.5px;
+    text-transform:uppercase;
+    text-decoration:none;
+    box-shadow:0 4px 14px rgba(27,42,74,.35);
+    transition:background .15s ease, transform .15s ease;
+  }
+  #fab-admin.visible{ display:flex; }
+  #fab-admin:hover{ background:var(--ochre); color:var(--ink); transform:translateY(-2px); }
+  #fab-admin svg{ width:16px; height:16px; flex-shrink:0; }
+  #auth-status{
+    font-family:'JetBrains Mono', monospace;
+    font-size:.72rem;
+    color:var(--ink-soft);
+    margin-top:10px;
+    line-height:1.5;
+  }
+  #auth-status.ok{ color:var(--ok); }
+  #auth-status.no{ color:var(--sold); }
+  @media (max-width:900px){
+    #fab-admin{ bottom:16px; right:16px; padding:12px 16px; font-size:.72rem; }
+  }
+  @media (max-width:900px){
+    .layout{ grid-template-columns:1fr; }
+    #map{ height:55vh; min-height:320px; border-right:none; border-bottom:2px solid var(--ink); }
+    .panel{ max-height:none; }
+    header{ padding:12px 16px; }
+    header h1{ font-size:1.05rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Visor de Lotes en Venta</h1>
+  <span class="stamp" id="lote-count">0 lotes</span>
+</header>
+
+<div class="layout">
+  <div id="map"></div>
+
+  <div class="panel">
+
+    <div class="card" data-tag="Filtrar">
+      <input type="text" id="buscador" placeholder="Buscar por nombre...">
+      <div class="legend" id="legend" style="margin-top:12px;">
+        <span class="item" data-estado="Disponible"><i class="dot ok"></i>Disponible</span>
+        <span class="item" data-estado="Apartado"><i class="dot held"></i>Apartado</span>
+        <span class="item" data-estado="Vendido"><i class="dot sold"></i>Vendido</span>
+        <span class="item" data-estado="En juridico"><i class="dot legal"></i>En jurídico</span>
+      </div>
+      <p class="hint">Clic en un estado para ocultarlo o mostrarlo en el mapa.</p>
+    </div>
+
+    <div class="card" data-tag="Lotes">
+      <div id="lista"></div>
+      <p id="empty-msg">No hay lotes que coincidan con el filtro.</p>
+    </div>
+
+    <div class="card" data-tag="Acceso admin">
+      <div id="g_id_onload"
+        data-client_id="TU_CLIENT_ID_AQUI.apps.googleusercontent.com"
+        data-callback="handleCredentialResponse"
+        data-auto_prompt="false">
+      </div>
+      <div class="g_id_signin" data-type="standard" data-size="medium" data-theme="outline" data-text="signin_with"></div>
+      <div id="auth-status"></div>
+      <p class="hint">Inicia sesión con tu correo de Google para ver el botón "Agregar lote" (solo si tu correo está en la pestaña Usuario con estado Activo).</p>
+    </div>
+
+    <div class="card" data-tag="Fuente de datos">
+      <label for="gas-url">URL de Google Apps Script (Web App)</label>
+      <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/XXXXX/exec">
+      <p class="hint">Solo lectura: este visor consulta la hoja de cálculo pero no puede agregar, editar ni borrar lotes.</p>
+    </div>
+
+  </div>
+</div>
+
+<a id="fab-admin" href="admin.html" title="Agregar lote">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="12" y1="5" x2="12" y2="19"></line>
+    <line x1="5" y1="12" x2="19" y2="12"></line>
+  </svg>
+  Agregar lote
+</a>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+  // ---------- Config ----------
+  // Deja fija tu URL aquí si quieres que el visor cargue solo, sin pedirla:
+  // let GAS_URL = "https://script.google.com/macros/s/TU_ID_AQUI/exec";
+  const STORAGE_KEY = 'lotesVenta_gasUrl';
+  let GAS_URL = "";
+  try{ GAS_URL = (new URLSearchParams(location.search)).get('gasUrl') || ""; }catch(e){}
+  const gasInput = document.getElementById('gas-url');
+  let savedUrl = "";
+  try{ savedUrl = localStorage.getItem(STORAGE_KEY) || ""; }catch(e){}
+  if(!GAS_URL && savedUrl){ GAS_URL = savedUrl; }
+  if(GAS_URL){ gasInput.value = GAS_URL; }
+  gasInput.addEventListener('change', () => {
+    GAS_URL = gasInput.value.trim();
+    try{ localStorage.setItem(STORAGE_KEY, GAS_URL); }catch(e){}
+    cargarLotes();
+  });
+
+  // ---------- Mapa ----------
+  const map = L.map('map').setView([32.62476, -115.45389], 12); // Mexicali por defecto
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19
+  }).addTo(map);
+
+  let lotesLayer = L.layerGroup().addTo(map);
+  let todosLosLotes = [];
+  let estadosOcultos = new Set();
+  let marcadoresPorIndice = {};
+
+  function colorEstado(estado){
+    switch((estado||'').toLowerCase()){
+      case 'disponible': return '#3E7A4C';
+      case 'vendido': return '#8A2B2B';
+      case 'apartado': return '#B8842B';
+      case 'en juridico': return '#5B4B8A';
+      default: return '#334268';
+    }
+  }
+
+  function estadoValido(estado){
+    return !estadosOcultos.has((estado||'').trim());
+  }
+
+  function filtroTexto(){
+    return document.getElementById('buscador').value.trim().toLowerCase();
+  }
+
+  function render(){
+    const texto = filtroTexto();
+    lotesLayer.clearLayers();
+    marcadoresPorIndice = {};
+
+    const visibles = todosLosLotes.filter(l =>
+      estadoValido(l.estado) &&
+      (!texto || (l.nombre||'').toLowerCase().includes(texto))
+    );
+
+    document.getElementById('lote-count').textContent =
+      visibles.length + ' lote' + (visibles.length===1?'':'s') +
+      (visibles.length !== todosLosLotes.length ? ' de ' + todosLosLotes.length : '');
+
+    // Mapa
+    visibles.forEach((l, i) => {
+      const lat = parseFloat(l.lat), lng = parseFloat(l.lng);
+      if(isNaN(lat) || isNaN(lng)) return;
+      const c = colorEstado(l.estado);
+      const circle = L.circleMarker([lat, lng], {
+        radius:9, color:'#1B2A4A', weight:1.5, fillColor:c, fillOpacity:.9
+      }).addTo(lotesLayer);
+      circle.bindPopup(
+        '<b>'+ (l.nombre||'Sin nombre') +'</b><br>' +
+        'Estado: '+ (l.estado||'-') +'<br>' +
+        'Pago: '+ (l.tipoPago||'-') +'<br>' +
+        'Valor: $'+ (l.valor||'-') +'<br>' +
+        'Superficie: '+ (l.metros||'-') +' m²<br>' +
+        'Medida: '+ (l.medida||'-')
+      );
+      marcadoresPorIndice[i] = circle;
+    });
+
+    // Lista lateral
+    const lista = document.getElementById('lista');
+    const emptyMsg = document.getElementById('empty-msg');
+    lista.innerHTML = '';
+    emptyMsg.style.display = visibles.length ? 'none' : 'block';
+
+    visibles.forEach((l, i) => {
+      const item = document.createElement('div');
+      item.className = 'lote-item';
+      item.innerHTML =
+        '<div><b>'+ (l.nombre||'Sin nombre') +'</b><small>'+ (l.metros||'-') +' m² · '+ (l.tipoPago||'-') +'</small></div>' +
+        '<span class="badge" style="background:'+ colorEstado(l.estado) +'">'+ (l.estado||'-') +'</span>';
+      item.addEventListener('click', () => {
+        const lat = parseFloat(l.lat), lng = parseFloat(l.lng);
+        if(isNaN(lat) || isNaN(lng)) return;
+        map.setView([lat, lng], 16);
+        if(marcadoresPorIndice[i]) marcadoresPorIndice[i].openPopup();
+        if(window.innerWidth <= 900) map.scrollIntoView({behavior:'smooth'});
+      });
+      lista.appendChild(item);
+    });
+  }
+
+  document.getElementById('buscador').addEventListener('input', render);
+
+  document.querySelectorAll('#legend .item').forEach(el => {
+    el.addEventListener('click', () => {
+      const estado = el.getAttribute('data-estado');
+      if(estadosOcultos.has(estado)){
+        estadosOcultos.delete(estado);
+        el.classList.remove('off');
+      } else {
+        estadosOcultos.add(estado);
+        el.classList.add('off');
+      }
+      render();
+    });
+  });
+
+  async function cargarLotes(){
+    if(!GAS_URL) return;
+    try{
+      const res = await fetch(GAS_URL, { method:'GET' });
+      const data = await res.json();
+      if(Array.isArray(data)){
+        todosLosLotes = data.filter(l => l.lat && l.lng);
+        render();
+      }
+    }catch(err){
+      console.warn('No se pudieron cargar los lotes:', err);
+    }
+  }
+  cargarLotes();
+
+  // ---------- Login con Google + verificación contra la hoja "Usuario" ----------
+  function parseJwt(token){
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
+    );
+    return JSON.parse(jsonPayload);
+  }
+
+  const fabAdmin = document.getElementById('fab-admin');
+  const authStatus = document.getElementById('auth-status');
+
+  async function verificarUsuario(correo){
+    if(!GAS_URL){
+      authStatus.textContent = 'Falta configurar la URL de Apps Script arriba.';
+      authStatus.className = 'no';
+      return;
+    }
+    authStatus.textContent = 'Verificando ' + correo + '...';
+    authStatus.className = '';
+    try{
+      const url = GAS_URL + (GAS_URL.includes('?') ? '&' : '?') +
+        'accion=verificarUsuario&correo=' + encodeURIComponent(correo);
+      const res = await fetch(url, { method:'GET' });
+      const data = await res.json();
+      if(data && data.autorizado){
+        fabAdmin.classList.add('visible');
+        authStatus.textContent = '✓ Acceso admin habilitado (' + (data.nombre || correo) + ')';
+        authStatus.className = 'ok';
+      } else {
+        fabAdmin.classList.remove('visible');
+        authStatus.textContent = '✗ ' + correo + ' no está autorizado como admin.';
+        authStatus.className = 'no';
+      }
+    }catch(err){
+      fabAdmin.classList.remove('visible');
+      authStatus.textContent = 'Error al verificar: ' + err.message;
+      authStatus.className = 'no';
+    }
+  }
+
+  // Google llama esta función automáticamente al iniciar sesión
+  window.handleCredentialResponse = function(response){
+    try{
+      const datos = parseJwt(response.credential);
+      verificarUsuario((datos.email || '').trim().toLowerCase());
+    }catch(err){
+      authStatus.textContent = 'No se pudo leer la sesión de Google.';
+      authStatus.className = 'no';
+    }
+  };
+</script>
+</body>
+</html>
