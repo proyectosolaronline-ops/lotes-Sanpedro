@@ -165,7 +165,7 @@
   // Deja fija tu URL aquí si quieres que el visor cargue solo, sin pedirla:
   // let GAS_URL = "https://script.google.com/macros/s/TU_ID_AQUI/exec";
   const STORAGE_KEY = 'lotesVenta_gasUrl';
-  let GAS_URL = "";
+  let GAS_URL = "https://script.google.com/macros/s/AKfycbwkpW1AQn2Gfd1w2oN-Wuid2QXx0-VL3qLPYAJkwpKP16KWSmgW5R_ZxX_MzTy5LfpI/exec";
   try{ GAS_URL = (new URLSearchParams(location.search)).get('gasUrl') || ""; }catch(e){}
   const gasInput = document.getElementById('gas-url');
   let savedUrl = "";
