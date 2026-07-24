@@ -336,7 +336,7 @@
     GAS_URL = (new URLSearchParams(location.search)).get('gasUrl') || "";
   }catch(e){}
   const gasInput = document.getElementById('gas-url');
-  let savedUrl = "";
+  let savedUrl = "https://script.google.com/macros/s/AKfycbwkpW1AQn2Gfd1w2oN-Wuid2QXx0-VL3qLPYAJkwpKP16KWSmgW5R_ZxX_MzTy5LfpI/exec";
   try{ savedUrl = localStorage.getItem(STORAGE_KEY) || ""; }catch(e){}
   if(!GAS_URL && savedUrl){ GAS_URL = savedUrl; }
   if(GAS_URL){ gasInput.value = GAS_URL; }
