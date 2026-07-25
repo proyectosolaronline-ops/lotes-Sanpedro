@@ -166,7 +166,7 @@
   // let GAS_URL = "https://script.google.com/macros/s/TU_ID_AQUI/exec";
   const STORAGE_KEY = 'lotesVenta_gasUrl';
   let GAS_URL = "https://script.google.com/macros/s/AKfycbyJZAP5Av1xsqoUOyCfqzg-qcjTP965XcCOYB7dDwkll5REtnydIml-clPFpSCQCUdg/exec";
-  try{ GAS_URL = (new URLSearchParams(location.search)).get('gasUrl') || ""; }catch(e){}
+
   const gasInput = document.getElementById('gas-url');
   let savedUrl = "";
   try{ savedUrl = localStorage.getItem(STORAGE_KEY) || ""; }catch(e){}
