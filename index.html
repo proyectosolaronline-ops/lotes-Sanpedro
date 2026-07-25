@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Lotes en Venta</title>
+<meta name="description" content="Venta de lotes residenciales en Mexicali. Encuentra tu terreno ideal.">
+<meta name="keywords" content="lotes, terrenos, venta, Mexicali, ca">
+<meta name="robots" content="index, follow">
+<meta name="geo.region" content="MX-BCN">
+<meta property="og:title" content="Lotes en Venta">
+<meta property="og:description" content="Venta de lotes residenciales en Mexicali. Encuentra tu terreno ideal.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="es_MX">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1B2A4A;--ink-soft:#334268;--paper:#F5F3EE;--paper-line:#E4E0D6;--ochre:#C89B3C;--ok:#3E7A4C;--wa:#25D366;}
+*{box-sizing:border-box;}
+html,body{margin:0;height:100%;font-family:'Inter',sans-serif;background:var(--paper);color:var(--ink);-webkit-tap-highlight-color:transparent;overflow:hidden;}
+#map{position:fixed;inset:0;z-index:1;}
+#topbar{
+  position:fixed;top:0;left:0;right:0;z-index:500;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:3px 10px;background:rgba(245,243,238,.94);backdrop-filter:blur(4px);
+  border-bottom:2px solid var(--ink);
+  text-align:center;
+}
+#topbar h1{font-family:'Fraunces',serif;font-size:.85rem;font-weight:700;margin:0;line-height:1.2;color:var(--ink);}
+#topbar #topbar-desc{font-family:'Inter',sans-serif;font-size:.62rem;font-weight:400;color:var(--ink-soft);margin:0;line-height:1.2;}
+#topbar .stamp{
+  font-family:'JetBrains Mono',monospace;font-size:.5rem;color:var(--ink-soft);
+  border:1px solid var(--ink-soft);padding:1px 6px;border-radius:2px;
+  text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;margin-top:2px;
+}
+#btn-oficina{
+  position:absolute;top:6px;right:8px;width:74px;height:32px;border-radius:6px;
+  border:1px solid var(--paper-line);cursor:pointer;overflow:hidden;
+  background-color:var(--ink);background-size:cover;background-position:center;
+  padding:0;
+}
+#btn-oficina::after{
+  content:"";position:absolute;inset:0;background:rgba(27,42,74,.5);
+}
+#btn-oficina-label{
+  position:relative;z-index:1;color:#fff;font-family:'Fraunces',serif;
+  font-size:.6rem;font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,.4);
+}
+.fabs{ position:fixed; right:14px; z-index:900; display:flex; flex-direction:column; gap:10px; bottom:14px; }
+.fab{
+  width:48px;height:48px;border-radius:50%;background:#fff;border:2px solid var(--ink);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  box-shadow:0 2px 10px rgba(0,0,0,.18);font-size:1.25rem;text-decoration:none;color:var(--ink);
+}
+.fab:active{ transform:scale(.94); }
+.fab.on{ background:var(--ink); color:#fff; }
+.fab.whats{ background:var(--wa); border-color:var(--wa); color:#fff; }
+.fab.whats:active{ background:#1DA851; }
+#drawer{
+  position:fixed;left:0;right:0;bottom:0;z-index:800;
+  background:#fff;border-top:2px solid var(--ink);border-radius:14px 14px 0 0;
+  box-shadow:0 -4px 20px rgba(0,0,0,.15);
+  max-height:70vh;transform:translateY(calc(100% - 58px));transition:transform .25s ease;
+}
+#drawer.open{ transform:translateY(0); }
+#drawer-handle{
+  padding:14px 18px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;
+}
+#drawer-handle b{ font-family:'Fraunces',serif; font-size:.95rem; }
+#drawer-handle span{ font-family:'JetBrains Mono',monospace; font-size:.7rem; color:var(--ink-soft); }
+#drawer-body{ padding:0 18px 18px; overflow-y:auto; max-height:calc(70vh - 58px); }
+input[type=text]{
+  width:100%;padding:10px 12px;border:1px solid var(--paper-line);border-radius:3px;
+  font-family:'Inter',sans-serif;font-size:1rem;background:var(--paper);color:var(--ink);
+}
+#lista{ display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+.lote-item{
+  border:1px solid var(--paper-line);border-radius:3px;padding:10px 12px;cursor:pointer;
+  font-size:.82rem;display:flex;justify-content:space-between;align-items:center;gap:8px;
+}
+.lote-item:active{ background:var(--paper); }
+.lote-item b{ font-family:'Fraunces',serif; font-weight:500; display:block; }
+.lote-item small{ color:var(--ink-soft); font-size:.72rem; }
+.badge{
+  font-family:'JetBrains Mono',monospace;font-size:.6rem;padding:3px 8px;border-radius:10px;
+  color:#fff;background:var(--ok);white-space:nowrap;text-transform:uppercase;flex-shrink:0;
+}
+#empty-msg{ font-size:.8rem; color:var(--ink-soft); text-align:center; padding:16px 0; display:none; }
+.leaflet-popup-content{ font-family:'Inter',sans-serif; font-size:.85rem; }
+.leaflet-popup-content b{ font-family:'Fraunces',serif; }
+@media (min-width:768px){
+  #drawer{ left:auto; width:360px; right:16px; bottom:16px; border-radius:10px; border:1px solid var(--paper-line); border-top:1px solid var(--paper-line); max-height:calc(100vh - 100px); }
+  #drawer-body{ max-height:calc(100vh - 158px); }
+  .fabs{ right:392px; }
+}
+#modal-overlay{
+  position:fixed;inset:0;z-index:2000;background:rgba(27,42,74,.55);
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+#modal-overlay.open{ display:flex; }
+#modal-box{
+  background:#fff;border-radius:12px;width:100%;max-width:340px;max-height:88vh;
+  overflow-y:auto;position:relative;box-shadow:0 10px 30px rgba(0,0,0,.25);
+}
+#modal-close{
+  position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;
+  background:rgba(255,255,255,.9);border:1px solid var(--paper-line);cursor:pointer;
+  font-size:1rem;color:var(--ink);z-index:2;display:flex;align-items:center;justify-content:center;
+}
+#modal-foto{
+  width:100%;height:160px;object-fit:cover;display:block;background:var(--paper-line);
+  border-radius:12px 12px 0 0;
+}
+#modal-foto[src=""],#modal-foto.oculto{ display:none; }
+#modal-info{ padding:16px; text-align:center; }
+#modal-nombre{ font-family:'Fraunces',serif; font-size:1.15rem; font-weight:700; margin:0 0 4px; }
+#modal-ubicacion{ font-family:'JetBrains Mono',monospace; font-size:.7rem; color:var(--ink-soft); margin:0 0 8px; }
+#modal-desc{ font-size:.85rem; color:var(--ink-soft); margin:0 0 14px; line-height:1.4; }
+#modal-actions{ display:flex; gap:8px; }
+.modal-btn{
+  flex:1;padding:10px 8px;border-radius:6px;text-decoration:none;font-size:.8rem;
+  color:#fff;text-align:center;font-family:'Inter',sans-serif;font-weight:500;
+}
+.modal-btn.llegar{ background:var(--ink); }
+.modal-btn.whats{ background:var(--wa); }
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div id="topbar">
+  <h1 id="topbar-nombre">Lotes en Venta</h1>
+  <p id="topbar-desc">Venta de lotes residenciales en Mexicali. Encuentra tu terreno ideal.</p>
+  <button id="btn-oficina" title="Datos de la oficina">
+    <span id="btn-oficina-label">Oficina</span>
+  </button>
+  <span class="stamp" id="lote-count">0 lotes</span>
+</div>
+
+<div class="fabs">
+  <button class="fab" id="btn-gps" title="Mi ubicación en tiempo real">📍</button>
+  <a class="fab whats" id="btn-whats" title="Contactar por WhatsApp" target="_blank" rel="noopener">💬</a>
+  <button class="fab" id="btn-qr" title="Compartir">▦</button>
+</div>
+
+<div id="modal-overlay">
+  <div id="modal-box">
+    <button id="modal-close" title="Cerrar">✕</button>
+    <img id="modal-foto" src="" alt="">
+    <div id="modal-info">
+      <h2 id="modal-nombre">-</h2>
+      <p id="modal-ubicacion">-</p>
+      <p id="modal-desc">-</p>
+      <div id="modal-actions">
+        <a id="modal-btn-llegar" class="modal-btn llegar" target="_blank" rel="noopener">🗺️ Cómo llegar</a>
+        <a id="modal-btn-whats" class="modal-btn whats" target="_blank" rel="noopener">💬 WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="drawer">
+  <div id="drawer-handle">
+    <b>Lotes disponibles</b>
+    <span id="drawer-count">0</span>
+  </div>
+  <div id="drawer-body">
+    <input type="text" id="buscador" placeholder="Buscar por nombre...">
+    <div id="lista"></div>
+    <p id="empty-msg">No hay lotes disponibles que coincidan con la búsqueda.</p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  let NEGOCIO_LAT = 32.62476;
+  let NEGOCIO_LNG = -115.45389;
+  let NEGOCIO_NOMBRE = "Lotes del Valle";
+  let NEGOCIO_UBICACION = "Mexicali, B.C.";
+  let NEGOCIO_TELEFONO = "6861234567";
+  let NEGOCIO_DESCRIPCION = "Venta de lotes residenciales en Mexicali. Encuentra tu terreno ideal.";
+  let NEGOCIO_FOTOBANNER = "https://i.imgur.com/banner.jpg";
+  const CENTRO_LAT = 31.256496;
+  const CENTRO_LNG = -115.78464566666666;
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbxH5cidRpXnHutg4V46IKI4ZEHcmETVk_ECMS9Fv-Zd48oifcrmtbyhTtudfN4mqlgx/exec";
+  let LOTES_DATA = [{"fecha":"2026-07-25T02:24:59.932Z","estado":"Disponible","lng":-115.959885,"medida":"10X14","fotolote":"","codigolote":"test","valor":55000,"tipopago":"Financiamiento","lat":30.61868,"metros":120},{"fecha":"2026-07-25T02:28:14.349Z","estado":"Disponible","lng":-115.466502,"medida":"10X12","fotolote":"","codigolote":"test 2","valor":55000,"tipopago":"Contado","lat":32.6379,"metros":120},{"fecha":"2026-07-25T05:27:27.623Z","estado":"Disponible","fotolote":"","medida":"","lng":-115.92755,"codigolote":"lote 5","valor":55000,"tipopago":"Contado","lat":30.512908,"metros":130}];
+
+  // Marcador del negocio: se crea/actualiza al recibir datos
+  let negocioMarker = null;
+
+  function construirLinkWhats(){
+    let n = (NEGOCIO_TELEFONO || '').replace(/\D/g, '');
+    if(n.length === 10) n = '52' + n;
+    const msg = encodeURIComponent('Hola, vi sus lotes en venta y me interesa más información.');
+    return 'https://wa.me/' + n + '?text=' + msg;
+  }
+
+  function pintarNegocio(){
+    document.getElementById('topbar-nombre').textContent = NEGOCIO_NOMBRE;
+    document.getElementById('topbar-desc').textContent = NEGOCIO_DESCRIPCION;
+    document.title = NEGOCIO_NOMBRE;
+
+    if(negocioMarker){ map.removeLayer(negocioMarker); }
+    negocioMarker = L.marker([NEGOCIO_LAT, NEGOCIO_LNG]).addTo(map).bindPopup(
+      "<b>" + NEGOCIO_NOMBRE + "</b><br>" + NEGOCIO_UBICACION +
+      (NEGOCIO_TELEFONO ? "<br>☎ " + NEGOCIO_TELEFONO : "")
+    );
+
+    const btnWhats = document.getElementById('btn-whats');
+    if(btnWhats) btnWhats.href = construirLinkWhats();
+
+    const btnOficina = document.getElementById('btn-oficina');
+    if(btnOficina && NEGOCIO_FOTOBANNER){
+      btnOficina.style.backgroundImage = "url('" + NEGOCIO_FOTOBANNER + "')";
+    }
+  }
+
+  function abrirModalOficina(){
+    const foto = document.getElementById('modal-foto');
+    if(NEGOCIO_FOTOBANNER){
+      foto.src = NEGOCIO_FOTOBANNER;
+      foto.classList.remove('oculto');
+    } else {
+      foto.classList.add('oculto');
+    }
+    document.getElementById('modal-nombre').textContent = NEGOCIO_NOMBRE;
+    document.getElementById('modal-ubicacion').textContent =
+      NEGOCIO_UBICACION + (NEGOCIO_TELEFONO ? ' · ☎ ' + NEGOCIO_TELEFONO : '');
+    document.getElementById('modal-desc').textContent = NEGOCIO_DESCRIPCION;
+    document.getElementById('modal-btn-llegar').href =
+      'https://www.google.com/maps/dir/?api=1&destination=' + NEGOCIO_LAT + ',' + NEGOCIO_LNG;
+    document.getElementById('modal-btn-whats').href = construirLinkWhats();
+    document.getElementById('modal-overlay').classList.add('open');
+  }
+
+  function cerrarModalOficina(){
+    document.getElementById('modal-overlay').classList.remove('open');
+  }
+
+  if(GAS_URL){
+    fetch(GAS_URL + "?accion=negocio").then(r=>r.json()).then(d=>{
+      if(d){
+        if(d.nombrenegocio) NEGOCIO_NOMBRE = d.nombrenegocio;
+        if(d.ubicacion) NEGOCIO_UBICACION = d.ubicacion;
+        if(d.telefono) NEGOCIO_TELEFONO = d.telefono;
+        if(d.lat) NEGOCIO_LAT = parseFloat(d.lat);
+        if(d.lng) NEGOCIO_LNG = parseFloat(d.lng);
+        if(d.descripcion) NEGOCIO_DESCRIPCION = d.descripcion;
+        if(d.fotobanner) NEGOCIO_FOTOBANNER = d.fotobanner;
+        pintarNegocio();
+      }
+    }).catch(()=>{});
+
+    fetch(GAS_URL + "?accion=lotes").then(r=>r.json()).then(data=>{
+      if(Array.isArray(data)){
+        LOTES_DATA = data.filter(l => l.lat && l.lng && (l.estado||'').trim().toLowerCase() === 'disponible');
+        render();
+      }
+    }).catch(()=>{});
+  }
+
+  const map = L.map('map', { tap:true, zoomControl:false }).setView([CENTRO_LAT, CENTRO_LNG], 12);
+  L.control.zoom({ position:'bottomleft' }).addTo(map);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+  }).addTo(map);
+
+  pintarNegocio();
+
+  
+  let watchId = null;
+  let miMarcador = null;
+  const btnGps = document.getElementById('btn-gps');
+
+  function activarGPS(){
+    if(!navigator.geolocation){ alert('Tu navegador no soporta geolocalización.'); return; }
+    btnGps.classList.add('on');
+    watchId = navigator.geolocation.watchPosition(
+      p => {
+        const ll = [p.coords.latitude, p.coords.longitude];
+        if(!miMarcador){
+          miMarcador = L.circleMarker(ll, { radius:9, color:'#1B2A4A', weight:2, fillColor:'#C89B3C', fillOpacity:1 })
+            .addTo(map).bindPopup('📍 Tú estás aquí');
+          map.setView(ll, 15);
+        } else {
+          miMarcador.setLatLng(ll);
+        }
+      },
+      err => { console.warn(err); },
+      { enableHighAccuracy:true, maximumAge:2000, timeout:10000 }
+    );
+  }
+
+  function desactivarGPS(){
+    if(watchId !== null) navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+    btnGps.classList.remove('on');
+    if(miMarcador){ map.removeLayer(miMarcador); miMarcador = null; }
+  }
+
+  btnGps.addEventListener('click', () => {
+    if(watchId === null) activarGPS(); else desactivarGPS();
+  });
+
+  // Centrar el mapa automáticamente en la ubicación GPS del celular al cargar
+  activarGPS();
+
+  document.getElementById('btn-oficina').addEventListener('click', abrirModalOficina);
+  document.getElementById('modal-close').addEventListener('click', cerrarModalOficina);
+  document.getElementById('modal-overlay').addEventListener('click', (e) => {
+    if(e.target.id === 'modal-overlay') cerrarModalOficina();
+  });
+
+  
+  document.getElementById('btn-qr').addEventListener('click', () => {
+    const w = window.open('', '_blank', 'width=280,height=340');
+    w.document.write('<body style="font-family:sans-serif;text-align:center;padding:20px;"><div id="qr"></div><p>Escanea para ver los lotes</p></body>');
+    const s = w.document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+    s.onload = () => { new w.QRCode(w.document.getElementById('qr'), { text: window.location.href, width:200, height:200 }); };
+    w.document.body.appendChild(s);
+  });
+
+  
+  const drawer = document.getElementById('drawer');
+  document.getElementById('drawer-handle').addEventListener('click', () => drawer.classList.toggle('open'));
+
+  
+  let lotesLayer = L.layerGroup().addTo(map);
+  let marcadoresPorIndice = {};
+
+  function render(){
+    const texto = document.getElementById('buscador').value.trim().toLowerCase();
+    lotesLayer.clearLayers();
+    marcadoresPorIndice = {};
+
+    const visibles = LOTES_DATA.filter(l =>
+      !texto || (l.codigolote || l.nombre || '').toLowerCase().includes(texto)
+    );
+
+    document.getElementById('lote-count').textContent = LOTES_DATA.length + ' disponibles';
+    document.getElementById('drawer-count').textContent = visibles.length;
+
+    visibles.forEach((l, i) => {
+      const lat = parseFloat(l.lat), lng = parseFloat(l.lng);
+      if(isNaN(lat) || isNaN(lng)) return;
+      let pop = '<b>' + (l.codigolote || l.nombre || 'Sin nombre') + '</b><br>Pago: ' + (l.tipopago||'-') +
+        '<br>Valor: $' + (l.valor||'-') + '<br>' + (l.metros||'-') + ' m² · ' + (l.medida||'-');
+      if(l.fotolote) pop += '<br><img src="https://drive.google.com/thumbnail?id=' + l.fotolote + '" style="width:100%;max-width:200px;border-radius:4px;margin-top:6px;">';
+      pop += '<br><a href="https://www.google.com/maps/dir/?api=1&destination=' + lat + ',' + lng + '" target="_blank" style="display:inline-block;margin-top:6px;padding:6px 10px;background:#1B2A4A;color:#F5F3EE;border-radius:3px;text-decoration:none;font-size:.75rem;">🗺️ Cómo llegar</a>';
+      const circle = L.circleMarker([lat,lng], { radius:9, color:'#1B2A4A', weight:1.5, fillColor:'#3E7A4C', fillOpacity:.9 }).addTo(lotesLayer).bindPopup(pop);
+      marcadoresPorIndice[i] = circle;
+    });
+
+    const lista = document.getElementById('lista');
+    const emptyMsg = document.getElementById('empty-msg');
+    lista.innerHTML = '';
+    emptyMsg.style.display = visibles.length ? 'none' : 'block';
+
+    visibles.forEach((l, i) => {
+      const item = document.createElement('div');
+      item.className = 'lote-item';
+      item.innerHTML = '<div><b>' + (l.codigolote || l.nombre || 'Sin nombre') + '</b><small>' +
+        (l.metros||'-') + ' m² · ' + (l.tipopago||'-') + '</small></div><span class="badge">Disponible</span>';
+      item.addEventListener('click', () => {
+        const lat = parseFloat(l.lat), lng = parseFloat(l.lng);
+        if(isNaN(lat) || isNaN(lng)) return;
+        map.setView([lat, lng], 16);
+        if(marcadoresPorIndice[i]) marcadoresPorIndice[i].openPopup();
+        drawer.classList.remove('open');
+      });
+      lista.appendChild(item);
+    });
+  }
+
+  document.getElementById('buscador').addEventListener('input', render);
+  render();
+</script>
+</body>
+</html>
