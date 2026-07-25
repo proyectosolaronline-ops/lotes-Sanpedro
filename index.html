@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Visor de Lotes en Venta</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2A4A; --ink-soft:#334268; --paper:#F5F3EE; --paper-line:#E4E0D6;
+    --ochre:#C89B3C; --ok:#3E7A4C; --sold:#8A2B2B; --held:#B8842B; --legal:#5B4B8A;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:'Inter', sans-serif; background:var(--paper); color:var(--ink);
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  /* ============ MOBILE-FIRST (default) ============ */
+  header{
+    display:flex; align-items:baseline; justify-content:space-between;
+    padding:12px 16px; border-bottom:2px solid var(--ink); background:var(--paper);
+    flex-wrap:wrap; gap:6px; position:sticky; top:0; z-index:1000;
+  }
+  header h1{ font-family:'Fraunces', serif; font-size:1.05rem; font-weight:700; margin:0; }
+  header .stamp{
+    font-family:'JetBrains Mono', monospace; font-size:.62rem; color:var(--ink-soft);
+    border:1px solid var(--ink-soft); padding:3px 8px; border-radius:2px;
+    text-transform:uppercase; letter-spacing:1px; white-space:nowrap;
+  }
+
+  .layout{
+    display:flex; flex-direction:column; min-height:calc(100vh - 56px);
+  }
+  #map{
+    height:55vh; min-height:320px; width:100%;
+    border-bottom:2px solid var(--ink); order:1;
+  }
+  .panel{
+    padding:16px; overflow-y:auto; flex:1; order:2; max-height:none;
+  }
+
+  .card{
+    background:#fff; border:1px solid var(--paper-line); border-radius:4px;
+    padding:14px 16px; margin-bottom:16px; position:relative;
+  }
+  .card::before{
+    content:attr(data-tag); position:absolute; top:-10px; left:12px;
+    background:var(--ink); color:var(--paper); font-family:'JetBrains Mono', monospace;
+    font-size:.6rem; letter-spacing:1px; padding:2px 7px; border-radius:2px;
+  }
+  .legend{ display:flex; flex-wrap:wrap; gap:8px; }
+  .legend .item{
+    display:flex; align-items:center; gap:5px; font-size:.72rem; color:var(--ink-soft);
+    cursor:pointer; user-select:none; padding:4px 0;
+  }
+  .legend .item.off{ opacity:.35; }
+  .dot{ width:11px; height:11px; border-radius:50%; display:inline-block; border:1px solid rgba(0,0,0,.2); flex-shrink:0; }
+  .dot.ok{background:var(--ok);} .dot.sold{background:var(--sold);}
+  .dot.held{background:var(--held);} .dot.legal{background:var(--legal);}
+  input[type=text]{
+    width:100%; padding:10px 12px; border:1px solid var(--paper-line); border-radius:3px;
+    font-family:'Inter', sans-serif; font-size:1rem; background:var(--paper); color:var(--ink);
+    -webkit-appearance:none;
+  }
+  input:focus{ outline:2px solid var(--ochre); outline-offset:1px; background:#fff; }
+  label{
+    display:block; font-size:.68rem; text-transform:uppercase; letter-spacing:.6px;
+    color:var(--ink-soft); margin:0 0 5px; font-weight:600;
+  }
+  .hint{ font-size:.7rem; color:var(--ink-soft); margin:6px 0 0; font-style:italic; }
+  #lista{ display:flex; flex-direction:column; gap:6px; max-height:280px; overflow-y:auto; }
+  .lote-item{
+    border:1px solid var(--paper-line); border-radius:3px; padding:10px 12px;
+    cursor:pointer; font-size:.78rem; display:flex; justify-content:space-between;
+    align-items:center; gap:8px; -webkit-tap-highlight-color:transparent;
+  }
+  .lote-item:active{ background:var(--paper); }
+  .lote-item b{ font-family:'Fraunces', serif; font-weight:500; display:block; }
+  .lote-item small{ color:var(--ink-soft); font-size:.7rem; }
+  .badge{
+    font-family:'JetBrains Mono', monospace; font-size:.58rem; padding:3px 7px;
+    border-radius:10px; color:#fff; white-space:nowrap; text-transform:uppercase; flex-shrink:0;
+  }
+  .leaflet-popup-content{ font-family:'Inter', sans-serif; font-size:.82rem; }
+  .leaflet-popup-content b{ font-family:'Fraunces', serif; }
+  #empty-msg{ font-size:.78rem; color:var(--ink-soft); text-align:center; padding:20px 0; display:none; }
+
+  #fab-admin{
+    position:fixed; bottom:16px; right:16px; z-index:1200;
+    display:flex; align-items:center; gap:6px;
+    padding:12px 16px; background:var(--ink); color:var(--paper);
+    border:none; border-radius:30px;
+    font-family:'JetBrains Mono', monospace; font-size:.72rem;
+    letter-spacing:.5px; text-transform:uppercase; text-decoration:none;
+    box-shadow:0 4px 14px rgba(27,42,74,.35);
+    transition:background .15s ease, transform .15s ease;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #fab-admin:active{ background:var(--ochre); color:var(--ink); transform:scale(.96); }
+  #fab-admin svg{ width:15px; height:15px; flex-shrink:0; }
+
+  /* ============ TABLET / DESKTOP ============ */
+  @media (min-width:768px){
+    header{ padding:14px 20px; }
+    header h1{ font-size:1.25rem; }
+    header .stamp{ font-size:.68rem; padding:4px 10px; }
+    .layout{
+      display:grid; grid-template-columns:1fr 340px; min-height:calc(100vh - 60px);
+    }
+    #map{
+      height:100%; min-height:520px; border-right:2px solid var(--ink);
+      border-bottom:none; order:1;
+    }
+    .panel{
+      padding:20px 22px; max-height:calc(100vh - 60px); order:2;
+    }
+    .card{ padding:16px 18px; margin-bottom:18px; }
+    .legend .item{ font-size:.76rem; }
+    .hint{ font-size:.74rem; }
+    input[type=text]{ font-size:.88rem; }
+    #lista{ max-height:340px; }
+    .lote-item{ font-size:.8rem; padding:9px 11px; }
+    .lote-item small{ font-size:.72rem; }
+    .badge{ font-size:.6rem; }
+    #fab-admin{
+      bottom:22px; right:22px; padding:13px 18px; font-size:.78rem;
+    }
+    #fab-admin svg{ width:16px; height:16px; }
+    #fab-admin:hover{ background:var(--ochre); color:var(--ink); transform:translateY(-2px); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Visor de Lotes en Venta</h1>
+  <span class="stamp" id="lote-count">0 lotes</span>
+</header>
+
+<div class="layout">
+  <div id="map"></div>
+
+  <div class="panel">
+    <div class="card" data-tag="Filtrar">
+      <input type="text" id="buscador" placeholder="Buscar por nombre..." inputmode="text">
+      <div class="legend" id="legend" style="margin-top:10px;">
+        <span class="item" data-estado="Disponible"><i class="dot ok"></i>Disponible</span>
+        <span class="item" data-estado="Apartado"><i class="dot held"></i>Apartado</span>
+        <span class="item" data-estado="Vendido"><i class="dot sold"></i>Vendido</span>
+        <span class="item" data-estado="En juridico"><i class="dot legal"></i>En jurídico</span>
+      </div>
+      <p class="hint">Toca un estado para ocultarlo o mostrarlo.</p>
+    </div>
+
+    <div class="card" data-tag="Lotes">
+      <div id="lista"></div>
+      <p id="empty-msg">No hay lotes que coincidan con el filtro.</p>
+    </div>
+
+    <div class="card" data-tag="Fuente de datos">
+      <label for="gas-url">URL de Google Apps Script (datos)</label>
+      <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/XXXXX/exec">
+      <p class="hint">Solo lectura. Consulta la hoja pero no modifica nada.</p>
+      <label for="admin-url" style="margin-top:14px;">URL del panel admin</label>
+      <input type="text" id="admin-url" placeholder="https://script.google.com/macros/s/YYYYY/exec">
+      <p class="hint">Abre el panel. Google pide login y solo deja entrar a usuarios activos.</p>
+    </div>
+  </div>
+</div>
+
+<a id="fab-admin" href="#" title="Agregar lote" target="_blank" rel="noopener">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="12" y1="5" x2="12" y2="19"></line>
+    <line x1="5" y1="12" x2="19" y2="12"></line>
+  </svg>
+  Agregar
+</a>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+  const URL_POR_DEFECTO = "https://script.google.com/macros/s/AKfycbyJZAP5Av1xsqoUOyCfqzg-qcjTP965XcCOYB7dDwkll5REtnydIml-clPFpSCQCUdg/exec";
+
+  const STORAGE_KEY_GAS = 'lotesVenta_gasUrl';
+  let GAS_URL = URL_POR_DEFECTO;
+  try{ const s = localStorage.getItem(STORAGE_KEY_GAS); if(s) GAS_URL = s; }catch(e){}
+  const gasInput = document.getElementById('gas-url');
+  gasInput.value = GAS_URL;
+  gasInput.addEventListener('change', () => {
+    GAS_URL = gasInput.value.trim();
+    try{ localStorage.setItem(STORAGE_KEY_GAS, GAS_URL); }catch(e){}
+    cargarLotes();
+  });
+
+  const STORAGE_KEY_ADMIN = 'lotesVenta_adminUrl';
+  let ADMIN_URL = URL_POR_DEFECTO;
+  try{ const s = localStorage.getItem(STORAGE_KEY_ADMIN); if(s) ADMIN_URL = s; }catch(e){}
+  const adminInput = document.getElementById('admin-url');
+  const fabAdmin = document.getElementById('fab-admin');
+  adminInput.value = ADMIN_URL;
+  fabAdmin.href = ADMIN_URL;
+  adminInput.addEventListener('change', () => {
+    ADMIN_URL = adminInput.value.trim();
+    try{ localStorage.setItem(STORAGE_KEY_ADMIN, ADMIN_URL); }catch(e){}
+    fabAdmin.href = ADMIN_URL || '#';
+  });
+
+  const map = L.map('map', { tap:true }).setView([32.62476, -115.45389], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+  }).addTo(map);
+
+  let lotesLayer = L.layerGroup().addTo(map);
+  let todosLosLotes = [];
+  let estadosOcultos = new Set();
+  let marcadoresPorIndice = {};
+
+  function colorEstado(estado){
+    switch((estado||'').toLowerCase()){
+      case 'disponible': return '#3E7A4C';
+      case 'vendido': return '#8A2B2B';
+      case 'apartado': return '#B8842B';
+      case 'en juridico': return '#5B4B8A';
+      default: return '#334268';
+    }
+  }
+
+  function estadoValido(estado){ return !estadosOcultos.has((estado||'').trim()); }
+  function filtroTexto(){ return document.getElementById('buscador').value.trim().toLowerCase(); }
+
+  function render(){
+    const texto = filtroTexto();
+    lotesLayer.clearLayers();
+    marcadoresPorIndice = {};
+    const visibles = todosLosLotes.filter(l => estadoValido(l.estado) && (!texto || (l.nombre||'').toLowerCase
