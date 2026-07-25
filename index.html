@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Editor de Usuarios</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2A4A; --ink-soft:#334268; --paper:#F5F3EE; --paper-line:#E4E0D6;
+    --ochre:#C89B3C; --ok:#3E7A4C; --sold:#8A2B2B; --held:#B8842B;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; font-family:'Inter', sans-serif; background:var(--paper); color:var(--ink);
+    -webkit-tap-highlight-color:transparent;
+  }
+  header{
+    display:flex; align-items:baseline; justify-content:space-between;
+    padding:12px 16px; border-bottom:2px solid var(--ink); background:var(--paper);
+    position:sticky; top:0; z-index:100; gap:8px;
+  }
+  header h1{ font-family:'Fraunces', serif; font-size:1.05rem; font-weight:700; margin:0; }
+  header .who{ font-family:'JetBrains Mono', monospace; font-size:.62rem; color:var(--ink-soft); text-align:right; }
+  header .who button{
+    margin:4px 0 0; width:auto; padding:4px 8px; font-size:.6rem; background:none;
+    border:1px solid var(--ink-soft); color:var(--ink-soft);
+  }
+  main{ padding:14px; max-width:640px; margin:0 auto; }
+  .card{
+    background:#fff; border:1px solid var(--paper-line); border-radius:4px;
+    padding:14px 16px; margin-bottom:14px; position:relative;
+  }
+  .card::before{
+    content:attr(data-tag); position:absolute; top:-10px; left:12px;
+    background:var(--ink); color:var(--paper); font-family:'JetBrains Mono', monospace;
+    font-size:.6rem; letter-spacing:1px; padding:2px 7px; border-radius:2px;
+  }
+  label{
+    display:block; font-size:.68rem; text-transform:uppercase; letter-spacing:.6px;
+    color:var(--ink-soft); margin:12px 0 4px; font-weight:600;
+  }
+  label:first-child{ margin-top:0; }
+  input[type=text], input[type=email], input[type=tel], input[type=number], select, textarea{
+    width:100%; padding:11px 12px; border:1px solid var(--paper-line); border-radius:3px;
+    font-family:'Inter', sans-serif; font-size:1rem; background:var(--paper); color:var(--ink);
+    -webkit-appearance:none;
+  }
+  textarea{ min-height:90px; resize:vertical; }
+  input:focus, select:focus, textarea:focus{ outline:2px solid var(--ochre); outline-offset:1px; background:#fff; }
+  .hint{ font-size:.72rem; color:var(--ink-soft); margin:6px 0 0; font-style:italic; }
+  button{
+    margin-top:14px; width:100%; padding:14px; background:var(--ink); color:var(--paper);
+    border:none; border-radius:3px; font-family:'JetBrains Mono', monospace; font-size:.82rem;
+    letter-spacing:1px; text-transform:uppercase; cursor:pointer;
+  }
+  button:hover{ background:var(--ochre); color:var(--ink); }
+  button:disabled{ opacity:.5; cursor:wait; }
+  .btn-outline{ background:var(--paper); color:var(--ink); border:1px solid var(--ink); }
+  .btn-outline:hover{ background:var(--ink); color:var(--paper); }
+  .btn-danger{ background:var(--paper); color:var(--sold); border:1px solid var(--sold); }
+  .btn-danger:hover{ background:var(--sold); color:var(--paper); }
+  .fila-botones{ display:flex; gap:10px; }
+  .fila-botones button{ margin-top:14px; }
+  #status-msg{ margin-top:10px; font-size:.74rem; font-family:'JetBrains Mono', monospace; min-height:1.1em; }
+
+  /* ----- Login ----- */
+  #vista-login{ display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; }
+  #vista-login .box{ max-width:340px; width:100%; text-align:center; }
+  #vista-login h2{ font-family:'Fraunces', serif; margin:0 0 6px; font-size:1.3rem; }
+  #vista-login p{ font-size:.8rem; color:var(--ink-soft); line-height:1.5; margin-bottom:16px; }
+
+  /* ----- Lista ----- */
+  .buscador-wrap{ margin-bottom:14px; }
+  .usuario-item{
+    display:flex; align-items:center; gap:10px; padding:12px 14px; background:#fff;
+    border:1px solid var(--paper-line); border-radius:4px; margin-bottom:8px; cursor:pointer;
+  }
+  .usuario-item:active{ background:var(--paper); }
+  .usuario-item .foto{
+    width:42px; height:42px; border-radius:50%; object-fit:cover; flex-shrink:0;
+    background:var(--paper-line); border:1px solid var(--paper-line);
+  }
+  .usuario-item .info{ flex:1; min-width:0; }
+  .usuario-item .info b{ display:block; font-family:'Fraunces', serif; font-size:.95rem; font-weight:500; }
+  .usuario-item .info small{ display:block; color:var(--ink-soft); font-size:.72rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .badge{
+    font-family:'JetBrains Mono', monospace; font-size:.58rem; padding:3px 8px; border-radius:10px;
+    color:#fff; white-space:nowrap; text-transform:uppercase; flex-shrink:0;
+  }
+  #empty-msg, #loading-msg{ font-size:.78rem; color:var(--ink-soft); text-align:center; padding:24px 0; }
+
+  #btn-nuevo{
+    position:fixed; bottom:18px; right:18px; left:18px; z-index:200; max-width:604px; margin:0 auto;
+  }
+
+  /* ----- Foto ----- */
+  .foto-preview{ max-width:160px; max-height:160px; border-radius:4px; margin-top:8px; display:none; object-fit:cover; }
+
+  .oculto{ display:none !important; }
+
+  @media (min-width:640px){
+    main{ padding:24px; }
+    .card{ padding:18px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== APP (lista + edición) — acceso libre, sin login ===== -->
+<div id="vista-app">
+  <header>
+    <h1>Usuarios</h1>
+  </header>
+
+  <main>
+    <!-- LISTA -->
+    <div id="panel-lista">
+      <div class="buscador-wrap">
+        <input type="text" id="buscador" placeholder="Buscar por nombre o correo..." inputmode="text">
+      </div>
+      <div id="loading-msg">Cargando usuarios...</div>
+      <div id="lista-usuarios"></div>
+      <p id="empty-msg" class="oculto">No hay usuarios que coincidan.</p>
+    </div>
+
+    <!-- FORMULARIO -->
+    <div id="panel-form" class="oculto">
+      <div class="card" data-tag="Ficha de usuario">
+        <div id="campos-dinamicos"></div>
+
+        <label>Fotografía</label>
+        <input type="file" id="input-foto" accept="image/*">
+        <img id="preview-foto" class="foto-preview">
+        <p class="hint">Toca para elegir una foto de la cámara o de la galería.</p>
+
+        <div id="form-msg" style="margin-top:10px;font-size:.74rem;font-family:'JetBrains Mono',monospace;min-height:1.1em;"></div>
+
+        <div class="fila-botones">
+          <button id="btn-guardar">Guardar</button>
+          <button id="btn-cancelar" class="btn-outline">Cancelar</button>
+        </div>
+        <button id="btn-eliminar" class="btn-danger oculto">Eliminar usuario</button>
+      </div>
+    </div>
+  </main>
+
+  <button id="btn-nuevo">+ Nuevo usuario</button>
+</div>
+
+<script>
+  // ⚠️ Reemplaza con la URL de tu propia implementación de Apps Script si es distinta.
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbxH5cidRpXnHutg4V46IKI4ZEHcmETVk_ECMS9Fv-Zd48oifcrmtbyhTtudfN4mqlgx/exec";
+
+  // Campos conocidos de la hoja "Usuario" (mezcla datos de usuario + datos del negocio).
+  // Cualquier columna extra que exista en la hoja pero no esté aquí se agrega automáticamente como texto.
+  const CAMPOS = [
+    { key:'correo',         label:'Correo electrónico',   type:'email', required:true },
+    { key:'nombre',         label:'Nombre',               type:'text' },
+    { key:'estado',         label:'Estado',               type:'select', options:['Activo','Inactivo'] },
+    { key:'telefono',       label:'Teléfono',             type:'tel' },
+    { key:'nombrenegocio',  label:'Nombre del negocio',   type:'text' },
+    { key:'ubicacion',      label:'Ubicación',            type:'text' },
+    { key:'lat',            label:'Latitud',              type:'number' },
+    { key:'lng',            label:'Longitud',             type:'number' },
+    { key:'descripcion',    label:'Descripción (SEO)',    type:'textarea' },
+    { key:'palabrasclave',  label:'Palabras clave (SEO)', type:'text' },
+    { key:'fotobanner',     label:'Foto banner',          type:'foto' }
+  ];
+  const CAMPOS_OCULTOS = ['_fila', 'fecha']; // gestionados por el backend, no se editan aquí
+
+  let usuarios = [];
+  let usuarioEnEdicion = null; // objeto original o null si es nuevo
+  let fotoBase64Nueva = {};    // { campoKey: base64 } fotos pendientes de subir
+
+  // ---------- Helpers de red ----------
+  function get(params){
+    return fetch(GAS_URL + '?' + new URLSearchParams(params))
+      .then(r => r.text())
+      .then(texto => {
+        try{
+          return JSON.parse(texto);
+        } catch(e){
+          console.error('Respuesta no-JSON de Apps Script:', texto.slice(0, 300));
+          if(texto.includes('accounts.google.com') || texto.includes('ServiceLogin')){
+            throw new Error('La implementación de Apps Script pide iniciar sesión de Google. Cambia "Quién tiene acceso" a "Cualquier usuario" al volver a implementar.');
+          }
+          throw new Error('Respuesta inesperada del servidor (revisa la consola del navegador).');
+        }
+      });
+  }
+  function post(accion, payload){
+    // "accion" va en la URL (así lo espera doPost), el resto del payload va en el body.
+    // Sin header Content-Type explícito: evita el preflight CORS que Apps Script no maneja.
+    return fetch(GAS_URL + '?accion=' + encodeURIComponent(accion), {
+      method:'POST', body: JSON.stringify(payload)
+    }).then(r => r.json());
+  }
+
+  // ---------- LISTA ----------
+  function cargarUsuarios(){
+    document.getElementById('loading-msg').classList.remove('oculto');
+    document.getElementById('lista-usuarios').innerHTML = '';
+    get({ accion:'admin_usuarios', correo:'' })
+      .then(res => {
+        document.getElementById('loading-msg').classList.add('oculto');
+        if(res && res.error){
+          document.getElementById('lista-usuarios').innerHTML = '<p class="hint">✗ ' + res.error + '</p>';
+          return;
+        }
+        usuarios = Array.isArray(res) ? res : [];
+        pintarLista();
+      })
+      .catch(() => {
+        document.getElementById('loading-msg').textContent = '✗ Error al cargar. Recarga la página.';
+      });
+  }
+
+  function pintarLista(){
+    const texto = document.getElementById('buscador').value.trim().toLowerCase();
+    const cont = document.getElementById('lista-usuarios');
+    const vacio = document.getElementById('empty-msg');
+    cont.innerHTML = '';
+
+    const visibles = usuarios.filter(u =>
+      !texto || (u.nombre || '').toLowerCase().includes(texto) || (u.correo || '').toLowerCase().includes(texto)
+    );
+
+    vacio.classList.toggle('oculto', visibles.length > 0);
+
+    visibles.forEach(u => {
+      const item = document.createElement('div');
+      item.className = 'usuario-item';
+      const fotoId = u.fotobanner;
+      const fotoSrc = fotoId ? 'https://drive.google.com/thumbnail?id=' + fotoId : '';
+      item.innerHTML =
+        '<img class="foto" src="' + fotoSrc + '" onerror="this.style.visibility=\'hidden\'">' +
+        '<div class="info"><b>' + (u.nombre || u.correo || 'Sin nombre') + '</b><small>' + (u.correo || '') + '</small></div>' +
+        '<span class="badge" style="background:' + ((u.estado||'').toLowerCase()==='activo' ? 'var(--ok)' : 'var(--sold)') + '">' + (u.estado || '-') + '</span>';
+      item.addEventListener('click', () => abrirFormulario(u));
+      cont.appendChild(item);
+    });
+  }
+
+  document.getElementById('buscador').addEventListener('input', pintarLista);
+  document.getElementById('btn-nuevo').addEventListener('click', () => abrirFormulario(null));
+
+  // ---------- FORMULARIO ----------
+  function camposParaFormulario(){
+    // Empieza con los campos conocidos y agrega cualquier columna extra detectada en los datos ya cargados.
+    const keysConocidas = CAMPOS.map(c => c.key);
+    const extra = new Set();
+    usuarios.forEach(u => Object.keys(u).forEach(k => {
+      if(!keysConocidas.includes(k) && !CAMPOS_OCULTOS.includes(k)) extra.add(k);
+    }));
+    const dinamicos = [...extra].map(k => ({ key:k, label:k.charAt(0).toUpperCase()+k.slice(1), type:'text' }));
+    return CAMPOS.concat(dinamicos);
+  }
+
+  function abrirFormulario(usuario){
+    usuarioEnEdicion = usuario;
+    fotoBase64Nueva = {};
+    document.getElementById('panel-lista').classList.add('oculto');
+    document.getElementById('panel-form').classList.remove('oculto');
+    document.getElementById('btn-nuevo').classList.add('oculto');
+    document.getElementById('btn-eliminar').classList.toggle('oculto', !usuario);
+    document.getElementById('form-msg').textContent = '';
+    document.getElementById('input-foto').value = '';
+    document.getElementById('preview-foto').style.display = 'none';
+
+    const cont = document.getElementById('campos-dinamicos');
+    cont.innerHTML = '';
+    const campos = camposParaFormulario();
+
+    campos.forEach(c => {
+      if(c.type === 'foto') return; // la foto tiene su propio bloque fijo debajo (solo se soporta 1: fotobanner)
+      const valor = usuario ? (usuario[c.key] ?? '') : '';
+      const lbl = document.createElement('label');
+      lbl.textContent = c.label + (c.required ? ' *' : '');
+      lbl.setAttribute('for', 'campo-' + c.key);
+      cont.appendChild(lbl);
+
+      let input;
+      if(c.type === 'select'){
+        input = document.createElement('select');
+        c.options.forEach(op => {
+          const opt = document.createElement('option');
+          opt.value = op; opt.textContent = op;
+          if((valor || '').toLowerCase() === op.toLowerCase()) opt.selected = true;
+          input.appendChild(opt);
+        });
+      } else if(c.type === 'textarea'){
+        input = document.createElement('textarea');
+        input.value = valor;
+      } else {
+        input = document.createElement('input');
+        input.type = c.type;
+        input.value = valor;
+        if(c.key === 'correo' && usuario) input.disabled = true; // no permitir cambiar el correo de un usuario existente
+      }
+      input.id = 'campo-' + c.key;
+      input.dataset.key = c.key;
+      cont.appendChild(input);
+    });
+
+    // foto banner: precargar preview si ya existe
+    if(usuario && usuario.fotobanner){
+      const prev = document.getElementById('preview-foto');
+      prev.src = 'https://drive.google.com/thumbnail?id=' + usuario.fotobanner;
+      prev.style.display = 'block';
+    }
+  }
+
+  function cerrarFormulario(){
+    document.getElementById('panel-form').classList.add('oculto');
+    document.getElementById('panel-lista').classList.remove('oculto');
+    document.getElementById('btn-nuevo').classList.remove('oculto');
+    usuarioEnEdicion = null;
+  }
+  document.getElementById('btn-cancelar').addEventListener('click', cerrarFormulario);
+
+  document.getElementById('input-foto').addEventListener('change', function(){
+    const file = this.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      fotoBase64Nueva.fotobanner = e.target.result.split(',')[1];
+      const prev = document.getElementById('preview-foto');
+      prev.src = e.target.result;
+      prev.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('btn-guardar').addEventListener('click', () => {
+    const msg = document.getElementById('form-msg');
+    const payload = {};
+    document.querySelectorAll('#campos-dinamicos [data-key]').forEach(el => {
+      payload[el.dataset.key] = el.value;
+    });
+    // Si el correo estaba deshabilitado (edición), tomarlo del usuario original
+    if(usuarioEnEdicion) payload.correo = usuarioEnEdicion.correo;
+
+    if(!payload.correo || !payload.correo.trim()){
+      msg.style.color = 'var(--sold)'; msg.textContent = '⚠ El correo es obligatorio.'; return;
+    }
+
+    document.getElementById('btn-guardar').disabled = true;
+    msg.style.color = 'var(--ink-soft)'; msg.textContent = 'Guardando...';
+
+    function finalizarGuardado(){
+      if(usuarioEnEdicion && usuarioEnEdicion.fotobanner && !payload.fotobanner){
+        payload.fotobanner = usuarioEnEdicion.fotobanner; // conservar foto previa si no se cambió
+      }
+      post('guardar_usuario', { usuario: payload })
+        .then(res => {
+          document.getElementById('btn-guardar').disabled = false;
+          if(res && res.error){
+            msg.style.color = 'var(--sold)'; msg.textContent = '✗ ' + res.error; return;
+          }
+          msg.style.color = 'var(--ok)'; msg.textContent = '✓ Guardado.';
+          cargarUsuarios();
+          setTimeout(cerrarFormulario, 500);
+        })
+        .catch(() => {
+          document.getElementById('btn-guardar').disabled = false;
+          msg.style.color = 'var(--sold)'; msg.textContent = '✗ Error al guardar.';
+        });
+    }
+
+    if(fotoBase64Nueva.fotobanner){
+      post('subir_foto', { base64: fotoBase64Nueva.fotobanner, nombre: 'usuario_' + Date.now() })
+        .then(res => { payload.fotobanner = res.id || ''; finalizarGuardado(); })
+        .catch(() => { msg.style.color = 'var(--sold)'; msg.textContent = '✗ Error al subir la foto.'; document.getElementById('btn-guardar').disabled = false; });
+    } else {
+      finalizarGuardado();
+    }
+  });
+
+  document.getElementById('btn-eliminar').addEventListener('click', () => {
+    if(!usuarioEnEdicion) return;
+    if(!confirm('¿Eliminar a ' + (usuarioEnEdicion.nombre || usuarioEnEdicion.correo) + '? Esta acción no se puede deshacer.')) return;
+    const msg = document.getElementById('form-msg');
+    msg.style.color = 'var(--ink-soft)'; msg.textContent = 'Eliminando...';
+    post('eliminar_usuario', { correoObjetivo: usuarioEnEdicion.correo })
+      .then(res => {
+        if(res && res.error){ msg.style.color = 'var(--sold)'; msg.textContent = '✗ ' + res.error; return; }
+        cargarUsuarios();
+        cerrarFormulario();
+      })
+      .catch(() => { msg.style.color = 'var(--sold)'; msg.textContent = '✗ Error al eliminar.'; });
+  });
+
+  // Acceso libre: cargar la lista apenas se abre la página, sin login.
+  cargarUsuarios();
+</script>
+</body>
+</html>
