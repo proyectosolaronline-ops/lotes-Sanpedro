@@ -283,7 +283,7 @@
   async function cargarLotes(){
     if(!GAS_URL) return;
     try{
-      const res = await fetch(GAS_URL, { method:'GET' });
+   const res = await fetch(GAS_URL + '?accion=lotes', { method:'GET' });
       const data = await res.json();
       if(Array.isArray(data)){
         todosLosLotes = data.filter(l => l.lat && l.lng);
