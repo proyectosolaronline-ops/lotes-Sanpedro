@@ -302,7 +302,7 @@
   const adminInput = document.getElementById('admin-url');
   const fabAdmin = document.getElementById('fab-admin');
 
-  let ADMIN_URL = "";
+ let ADMIN_URL = "https://script.google.com/macros/s/AKfycbyJZAP5Av1xsqoUOyCfqzg-qcjTP965XcCOYB7dDwkll5REtnydIml-clPFpSCQCUdg/exec";
   try{ ADMIN_URL = localStorage.getItem(ADMIN_STORAGE_KEY) || ""; }catch(e){}
   if(ADMIN_URL){ adminInput.value = ADMIN_URL; fabAdmin.href = ADMIN_URL; }
 
