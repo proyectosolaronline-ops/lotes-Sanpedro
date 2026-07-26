@@ -213,6 +213,8 @@ input[type=text]{
   let NEGOCIO_FOTOBANNER = "https://i.imgur.com/banner.jpg";
   let NEGOCIO_ID = "";
   const GAS_URL = "https://script.google.com/macros/s/AKfycbyEsQ878-r8KeLeZ4dOvHPN0bCohS23G-KM2ckDy-MjWLsyr8tvN2jPNiaTQycG3Ws/exec";
+
+  
   const RADIO_KM = 100;
   
   let LOTES_DATA = [];
@@ -353,11 +355,11 @@ input[type=text]{
         cargarDatosGAS();
       },
       () => {
-        if(mapStatusVisor){ mapStatusVisor.textContent='Mostrando zona de los lotes'; }
+        if(mapStatusVisor){ mapStatusVisor.textContent='📍 Mostrando todos los lotes'; }
         setTimeout(ocultarStatusVisor, 2000);
         cargarDatosGAS();
       },
-      { enableHighAccuracy:true, timeout:8000, maximumAge:0 }
+      { enableHighAccuracy:true, timeout:10000, maximumAge:0 }
     );
   } else {
     ocultarStatusVisor();
@@ -389,7 +391,6 @@ input[type=text]{
       { enableHighAccuracy:true, maximumAge:2000, timeout:10000 }
     );
   }
-
   function desactivarGPS(){
     if(watchId !== null) navigator.geolocation.clearWatch(watchId);
     watchId = null;
@@ -424,16 +425,22 @@ input[type=text]{
   let lotesLayer = L.layerGroup().addTo(map);
   let marcadoresPorIndice = {};
 
-  function render(){
+function render(){
     const texto = document.getElementById('buscador').value.trim().toLowerCase();
     lotesLayer.clearLayers();
     marcadoresPorIndice = {};
 
-    let visibles = texto ? LOTES_DATA.filter(l =>
-      (l.codigolote || l.nombre || '').toLowerCase().includes(texto) || String(l.IdHoja1 || l.idHoja1 || '').includes(texto)
-    ) : LOTES_DATA;
+    let visibles = [...LOTES_DATA];
 
-    // FILTRAR POR 50km SI HAY GPS
+    // Filtrar por texto
+    if(texto){
+      visibles = visibles.filter(l =>
+        (l.codigolote || l.nombre || '').toLowerCase().includes(texto) || 
+        String(l.IdHoja1 || l.idHoja1 || '').includes(texto)
+      );
+    }
+
+    // FILTRAR POR DISTANCIA SI HAY GPS
     if(miUbicacionGPS){
       visibles = filtrarPorRadio(visibles, miUbicacionGPS.lat, miUbicacionGPS.lng, RADIO_KM);
     }
