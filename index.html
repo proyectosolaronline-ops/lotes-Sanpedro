@@ -136,23 +136,12 @@
   <div class="login-box">
     <h2>🏗️ Panel Admin</h2>
     <p>Acceso restringido</p>
-    
-    <div id="paso-email">
-      <input type="text" id="login-email" placeholder="Correo electrónico" inputmode="email" autocomplete="email">
-      <button id="btn-solicitar">Enviar código</button>
-      <div class="login-msg" id="msg-email"></div>
-    </div>
-    
-    <div id="paso-codigo">
-      <p style="font-size:.75rem;color:var(--ink-soft);">Código enviado a <b id="email-display"></b></p>
-      <input type="text" id="login-codigo" placeholder="•••••••" inputmode="numeric" maxlength="7" autocomplete="one-time-code">
-      <button id="btn-verificar">Verificar código</button>
-      <button id="btn-reenviar">← Cambiar correo</button>
-      <div class="login-msg" id="msg-codigo"></div>
-    </div>
+    <input type="text" id="login-email" placeholder="Correo electrónico" inputmode="email" autocomplete="email">
+    <input type="password" id="login-password" placeholder="Contraseña" autocomplete="current-password">
+    <button id="btn-entrar">Entrar</button>
+    <div class="login-msg" id="msg-login"></div>
   </div>
 </div>
-
 <!-- PANEL SCREEN -->
 <div id="panel-screen">
 
@@ -218,73 +207,38 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script>
   // ====== LOGIN ======
-  var loginEmail = '';
+ // ====== LOGIN ======
+document.getElementById('btn-entrar').addEventListener('click', function() {
+  var correo = document.getElementById('login-email').value.trim().toLowerCase();
+  var password = document.getElementById('login-password').value;
+  var msg = document.getElementById('msg-login');
 
-  document.getElementById('btn-solicitar').addEventListener('click', function() {
-    var email = document.getElementById('login-email').value.trim().toLowerCase();
-    var msg = document.getElementById('msg-email');
-    
-    if (!email || email.indexOf('@') === -1) {
-      msg.style.color = '#8A2B2B'; msg.textContent = '⚠️ Ingresa un correo válido.'; return;
-    }
-    
-    this.disabled = true;
-    msg.style.color = '#334268'; msg.textContent = '⏳ Verificando...';
-    
-    google.script.run
-      .withSuccessHandler(function() {
-        loginEmail = email;
-        document.getElementById('email-display').textContent = email;
-        document.getElementById('paso-email').style.display = 'none';
-        document.getElementById('paso-codigo').style.display = 'block';
-        document.getElementById('msg-codigo').textContent = '';
-        document.getElementById('login-codigo').focus();
-      })
-      .withFailureHandler(function(err) {
-        msg.style.color = '#8A2B2B'; msg.textContent = '❌ ' + err.message;
-        document.getElementById('btn-solicitar').disabled = false;
-      })
-      .solicitarCodigoAcceso(email);
-  });
+  if (!correo || correo.indexOf('@') === -1) {
+    msg.style.color = '#8A2B2B'; msg.textContent = '⚠️ Ingresa un correo válido.'; return;
+  }
+  if (!password) {
+    msg.style.color = '#8A2B2B'; msg.textContent = '⚠️ Ingresa tu contraseña.'; return;
+  }
 
-  document.getElementById('btn-verificar').addEventListener('click', function() {
-    var codigo = document.getElementById('login-codigo').value.trim();
-    var msg = document.getElementById('msg-codigo');
-    
-    if (!codigo || codigo.length !== 7) {
-      msg.style.color = '#8A2B2B'; msg.textContent = '⚠️ El código debe tener 7 dígitos.'; return;
-    }
-    
-    this.disabled = true;
-    msg.style.color = '#334268'; msg.textContent = '⏳ Verificando...';
-    
-    google.script.run
-      .withSuccessHandler(function() {
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('panel-screen').classList.add('visible');
-        initPanel();
-      })
-      .withFailureHandler(function(err) {
-        msg.style.color = '#8A2B2B'; msg.textContent = '❌ ' + err.message;
-        document.getElementById('btn-verificar').disabled = false;
-      })
-      .verificarCodigoAcceso(loginEmail, codigo);
-  });
+  this.disabled = true;
+  msg.style.color = '#334268'; msg.textContent = '⏳ Verificando...';
 
-  document.getElementById('btn-reenviar').addEventListener('click', function() {
-    document.getElementById('paso-email').style.display = 'block';
-    document.getElementById('paso-codigo').style.display = 'none';
-    document.getElementById('msg-email').textContent = '';
-    document.getElementById('btn-solicitar').disabled = false;
-  });
+  google.script.run
+    .withSuccessHandler(function() {
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('panel-screen').classList.add('visible');
+      initPanel();
+    })
+    .withFailureHandler(function(err) {
+      msg.style.color = '#8A2B2B'; msg.textContent = '❌ ' + err.message;
+      document.getElementById('btn-entrar').disabled = false;
+    })
+    .verificarLogin(correo, password);
+});
 
-  document.getElementById('login-email').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') document.getElementById('btn-solicitar').click();
-  });
-  document.getElementById('login-codigo').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') document.getElementById('btn-verificar').click();
-  });
-
+document.getElementById('login-password').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') document.getElementById('btn-entrar').click();
+});
   // ====== PANEL ======
   function initPanel() {
     // TABS
