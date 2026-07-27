@@ -375,12 +375,12 @@ input[type=text]{
     }).catch(()=>{});
   }
 
-  const map = L.map('map', { tap:true, zoomControl:false }).setView([CENTRO_LAT, CENTRO_LNG], 12);
-  L.control.zoom({ position:'bottomleft' }).addTo(map);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
-  }).addTo(map);
-
+  const CENTRO_LAT = 30.540973;
+  const CENTRO_LNG = -115.944901;
+  const ALTURA_KM = 20;
+  const map = L.map('map',{tap:true,zoomControl:false}).setView([CENTRO_LAT, CENTRO_LNG], 10);
+  L.control.zoom({position:'bottomleft'}).addTo(map);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors',maxZoom:19}).addTo(map);
   pintarNegocio();
 
   const mapStatusVisor = document.getElementById('map-status');
