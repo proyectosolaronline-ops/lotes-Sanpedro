@@ -324,7 +324,7 @@ if(navigator.geolocation){
   let miMarcador = null;
   const btnGps = document.getElementById('btn-gps');
 
-  function activarGPS(){
+function activarGPS(){
     if(!navigator.geolocation){ alert('Tu navegador no soporta geolocalización.'); return; }
     btnGps.classList.add('on');
     watchId = navigator.geolocation.watchPosition(
@@ -333,7 +333,6 @@ if(navigator.geolocation){
         if(!miMarcador){
           miMarcador = L.circleMarker(ll, { radius:9, color:'#1B2A4A', weight:2, fillColor:'#C89B3C', fillOpacity:1 })
             .addTo(map).bindPopup('📍 Tú estás aquí');
-          map.setView(ll, 15);
         } else {
           miMarcador.setLatLng(ll);
         }
@@ -350,12 +349,18 @@ if(navigator.geolocation){
     if(miMarcador){ map.removeLayer(miMarcador); miMarcador = null; }
   }
 
-  btnGps.addEventListener('click', () => {
-    if(watchId === null) activarGPS(); else desactivarGPS();
+btnGps.addEventListener('click', () => {
+    if(watchId === null) {
+      activarGPS();
+      if(navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(p => {
+          map.setView([p.coords.latitude, p.coords.longitude], 10);
+        });
+      }
+    } else {
+      desactivarGPS();
+    }
   });
-
-  activarGPS();
-
   document.getElementById('btn-oficina').addEventListener('click', abrirModalOficina);
   document.getElementById('modal-close').addEventListener('click', cerrarModalOficina);
   document.getElementById('modal-overlay').addEventListener('click', (e) => {
