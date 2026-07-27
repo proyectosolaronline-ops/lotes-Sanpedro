@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2A4A; --ink-soft:#334268; --paper:#F5F3EE; --paper-line:#E4E0D6;
+    --ochre:#C89B3C; --ok:#3E7A4C; --sold:#8A2B2B; --held:#B8842B; --legal:#5B4B8A;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:'Inter', sans-serif; background:var(--paper); color:var(--ink);
+    -webkit-tap-highlight-color:transparent;
+  }
+  
+  /* ========== LOGIN ========== */
+  .login-screen{
+    display:flex; align-items:center; justify-content:center; min-height:100vh;
+    padding:20px; background:var(--paper);
+  }
+  .login-box{
+    background:#fff; border:2px solid var(--ink); border-radius:12px;
+    padding:36px 24px; max-width:400px; width:100%; text-align:center;
+    box-shadow:0 8px 30px rgba(0,0,0,.12);
+  }
+  .login-box .icon{ font-size:3.5rem; display:block; margin-bottom:8px; }
+  .login-box h2{
+    font-family:'Fraunces',serif; font-size:1.3rem; font-weight:700;
+    margin:0 0 6px; color:var(--ink);
+  }
+  .login-box p{
+    font-size:.8rem; color:var(--ink-soft); margin:0 0 20px; line-height:1.5;
+  }
+  .login-box label{
+    display:block; text-align:left; font-size:.68rem; text-transform:uppercase;
+    letter-spacing:.8px; color:var(--ink-soft); margin:14px 0 5px; font-weight:600;
+  }
+  .login-box input{
+    width:100%; padding:13px 15px; border:2px solid var(--paper-line);
+    border-radius:8px; font-family:'Inter',sans-serif; font-size:1rem;
+    background:var(--paper); color:var(--ink); text-align:center;
+    transition:border-color .2s; -webkit-appearance:none;
+  }
+  .login-box input:focus{
+    outline:none; border-color:var(--ochre); background:#fff;
+  }
+  .login-box .codigo-input{
+    font-family:'JetBrains Mono',monospace; font-size:1.6rem; letter-spacing:10px;
+    font-weight:700;
+  }
+  .login-box button{
+    width:100%; margin-top:16px; padding:15px; background:var(--ink);
+    color:var(--paper); border:none; border-radius:8px;
+    font-family:'JetBrains Mono',monospace; font-size:.8rem;
+    letter-spacing:1px; text-transform:uppercase; cursor:pointer;
+    transition:all .2s; font-weight:700;
+  }
+  .login-box button:hover:not(:disabled){ background:var(--ochre); color:var(--ink); }
+  .login-box button:disabled{ opacity:.5; cursor:wait; }
+  .login-box .btn-link{
+    background:none; color:var(--ink-soft); border:1px solid var(--paper-line);
+    margin-top:8px; font-size:.7rem; padding:10px;
+  }
+  .login-box .btn-link:hover:not(:disabled){ background:var(--paper); color:var(--ink); }
+  .login-box .msg{
+    margin-top:12px; font-size:.72rem; font-family:'JetBrains Mono',monospace;
+    min-height:1.3em; padding:6px; border-radius:4px; transition:all .2s;
+  }
+  .login-box .msg.error{ background:#FFF0F0; color:var(--sold); }
+  .login-box .msg.success{ background:#F0FFF0; color:var(--ok); }
+  .login-box .msg.info{ background:#F0F4FF; color:var(--ink-soft); }
+  .step{ display:none; }
+  .step.active{ display:block; }
+  
+  /* ========== ADMIN ========== */
+  .admin-screen{ display:none; }
+  .admin-screen.active{ display:block; }
+  
+  header{
+    display:flex; align-items:baseline; justify-content:space-between;
+    padding:12px 16px; border-bottom:2px solid var(--ink); background:var(--paper);
+    flex-wrap:wrap; gap:6px;
+  }
+  header h1{ font-family:'Fraunces', serif; font-size:1.05rem; font-weight:700; margin:0; }
+  header .stamp{
+    font-family:'JetBrains Mono', monospace; font-size:.62rem; color:var(--ink-soft);
+    border:1px solid var(--ink-soft); padding:6px 10px; border-radius:4px;
+    text-transform:uppercase; letter-spacing:1px; white-space:nowrap; cursor:pointer;
+    transition:all .2s;
+  }
+  header .stamp:hover{ background:var(--sold); color:#fff; border-color:var(--sold); }
+  .tabs{
+    display:flex; border-bottom:1px solid var(--paper-line); overflow-x:auto;
+    background:var(--paper); position:sticky; top:0; z-index:999;
+  }
+  .tabs button{
+    flex:1; min-width:80px; padding:12px 10px; background:none; border:none;
+    font-family:'JetBrains Mono', monospace; font-size:.65rem; letter-spacing:.5px;
+    text-transform:uppercase; cursor:pointer; color:var(--ink-soft);
+    border-bottom:2px solid transparent; white-space:nowrap;
+  }
+  .tabs button.active{ color:var(--ink); border-bottom-color:var(--ochre); font-weight:700; }
+  .tab-content{ display:none; }
+  .tab-content.active{ display:block; }
+  .layout{ display:flex; flex-direction:column; min-height:calc(100vh - 100px); }
+  #map{ height:45vh; min-height:280px; width:100%; border-bottom:2px solid var(--ink); }
+  .panel{ padding:14px; overflow-y:auto; flex:1; }
+  .card{
+    background:#fff; border:1px solid var(--paper-line); border-radius:4px;
+    padding:14px 16px; margin-bottom:14px; position:relative;
+  }
+  .card::before{
+    content:attr(data-tag); position:absolute; top:-10px; left:12px;
+    background:var(--ink); color:var(--paper); font-family:'JetBrains Mono', monospace;
+    font-size:.6rem; letter-spacing:1px; padding:2px 7px; border-radius:2px;
+  }
+  .coords{ display:flex; gap:8px; font-family:'JetBrains Mono', monospace; }
+  .coords .box{
+    flex:1; background:var(--ink); color:#B7F0C4; padding:8px 10px;
+    border-radius:3px; font-size:.8rem; display:flex; flex-direction:column; gap:2px;
+  }
+  .coords .box span{ font-size:.55rem; color:#8FA8C7; letter-spacing:1px; text-transform:uppercase; }
+  .hint{ font-size:.7rem; color:var(--ink-soft); margin:6px 0 0; font-style:italic; }
+  label{
+    display:block; font-size:.68rem; text-transform:uppercase; letter-spacing:.6px;
+    color:var(--ink-soft); margin:10px 0 4px; font-weight:600;
+  }
+  input[type=text], input[type=number], select{
+    width:100%; padding:10px 12px; border:1px solid var(--paper-line); border-radius:3px;
+    font-family:'Inter', sans-serif; font-size:1rem; background:var(--paper); color:var(--ink);
+    -webkit-appearance:none;
+  }
+  input:focus, select:focus{ outline:2px solid var(--ochre); outline-offset:1px; background:#fff; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  button.primary{
+    margin-top:14px; width:100%; padding:14px; background:var(--ink); color:var(--paper);
+    border:none; border-radius:3px; font-family:'JetBrains Mono', monospace; font-size:.82rem;
+    letter-spacing:1px; text-transform:uppercase; cursor:pointer;
+  }
+  button.primary:hover{ background:var(--ochre); color:var(--ink); }
+  button.primary:disabled{ opacity:.5; cursor:wait; }
+  .btn-outline{ background:var(--paper); color:var(--ink); border:1px solid var(--ink); margin-top:8px; }
+  .btn-outline:hover{ background:var(--ink); color:var(--paper); }
+  #status-msg{ margin-top:8px; font-size:.74rem; font-family:'JetBrains Mono', monospace; min-height:1.1em; }
+  .foto-preview{ max-width:100%; max-height:160px; border-radius:4px; margin-top:8px; display:none; }
+  textarea{ width:100%; height:200px; padding:12px; border:1px solid var(--paper-line); border-radius:3px; font-family:'JetBrains Mono', monospace; font-size:.65rem; background:#fff; color:var(--ink); resize:vertical; display:none; }
+  
+  @media (min-width:768px){
+    header{ padding:14px 20px; }
+    header h1{ font-size:1.25rem; }
+    .layout{ display:grid; grid-template-columns:1.4fr 1fr; min-height:calc(100vh - 60px); }
+    #map{ height:100%; min-height:480px; border-right:2px solid var(--ink); border-bottom:none; }
+    .panel{ padding:22px 24px 40px; max-height:calc(100vh - 60px); }
+    .card{ padding:18px 20px; margin-bottom:20px; }
+    .coords .box{ padding:10px 12px; font-size:.9rem; }
+    input[type=text], input[type=number], select{ font-size:.9rem; }
+    textarea{ height:300px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== PANTALLA DE LOGIN ==================== -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <span class="icon">🔐</span>
+    <h2>Panel de Administración</h2>
+    <p>Ingresa con tu correo registrado.<br>Recibirás un código de acceso por email.</p>
+    
+    <!-- Paso 1: Correo -->
+    <div class="step active" id="step-correo">
+      <label for="login-correo">📧 Tu correo electrónico</label>
+      <input type="email" id="login-correo" placeholder="ejemplo@correo.com" autocomplete="email" autofocus>
+      <button id="btn-solicitar" class="primary">Enviar código de acceso</button>
+      <div class="msg" id="msg-correo"></div>
+    </div>
+    
+    <!-- Paso 2: Código -->
+    <div class="step" id="step-codigo">
+      <label for="login-codigo">🔢 Código de verificación</label>
+      <input type="text" id="login-codigo" class="codigo-input" placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code">
+      <button id="btn-verificar" class="primary">Verificar y acceder</button>
+      <button id="btn-reenviar" class="btn-link">📤 Reenviar código</button>
+      <button id="btn-cambiar" class="btn-link">✏️ Usar otro correo</button>
+      <div class="msg" id="msg-codigo"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== PANTALLA ADMIN ==================== -->
+<div class="admin-screen" id="admin-screen">
+  <header>
+    <h1>🏗️ Panel Admin · <span id="admin-nombre"></span></h1>
+    <span class="stamp" id="btn-logout">🚪 Cerrar sesión</span>
+  </header>
+
+  <div class="tabs">
+    <button class="active" data-tab="tab-registrar">📝 Registrar Lote</button>
+    <button data-tab="tab-visor">🌐 Generar Visor</button>
+  </div>
+
+  <div id="tab-registrar" class="tab-content active">
+    <div class="layout">
+      <div id="map"></div>
+      <div class="panel">
+        <div class="card" data-tag="Ubicación">
+          <div class="coords">
+            <div class="box"><span>Latitud</span><b id="lat-display">—</b></div>
+            <div class="box"><span>Longitud</span><b id="lng-display">—</b></div>
+          </div>
+          <p class="hint">Toca el mapa o escribe coordenadas manualmente.</p>
+          <div class="row2">
+            <div><label for="lat-input">Latitud</label><input type="text" id="lat-input" placeholder="32.62476" inputmode="decimal"></div>
+            <div><label for="lng-input">Longitud</label><input type="text" id="lng-input" placeholder="-115.45389" inputmode="decimal"></div>
+          </div>
+        </div>
+        <div class="card" data-tag="Ficha del Lote">
+          <label for="codigolote">Código</label><input type="text" id="codigolote" placeholder="LOTE-001">
+          <div class="row2">
+            <div><label for="tipopago">Pago</label><select id="tipopago"><option>Contado</option><option>Crédito</option><option>Financiamiento</option></select></div>
+            <div><label for="estado">Estado</label><select id="estado"><option>Disponible</option><option>Apartado</option><option>Vendido</option><option>En juridico</option></select></div>
+          </div>
+          <div class="row2">
+            <div><label for="valor">Valor ($)</label><input type="number" id="valor" placeholder="450000"></div>
+            <div><label for="metros">m²</label><input type="number" id="metros" placeholder="120"></div>
+          </div>
+          <label for="medida">Medida</label><input type="text" id="medida" placeholder="8m x 15m">
+          <label for="fotolote">Foto del lote</label><input type="file" id="fotolote" accept="image/*" capture="environment" style="padding:8px;">
+          <img id="preview-lote" class="foto-preview">
+          <button id="btn-guardar" class="primary">💾 Guardar lote</button>
+          <div id="status-msg"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-visor" class="tab-content">
+    <div class="panel">
+      <div class="card" data-tag="Visor HTML para GitHub">
+        <p class="hint" style="margin-bottom:12px;">
+          Genera el archivo <strong>index.html</strong> listo para publicar en <strong>GitHub Pages</strong>.<br>
+          ✅ Incluye todos los lotes disponibles<br>
+          ✅ GPS en tiempo real, WhatsApp, QR<br>
+          ✅ Funciona offline con datos incrustados
+        </p>
+        <button id="btn-generar-visor" class="primary">🔄 Generar visor HTML</button>
+        <button id="btn-descargar" class="btn-outline" style="display:none;">💾 Descargar index.html</button>
+        <textarea id="visor-output" readonly></textarea>
+        <p id="visor-msg" class="hint"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+  const URL_APP = "<?= urlApp ?>";
+  
+  // ==================== SISTEMA DE LOGIN ====================
+  const loginScreen = document.getElementById('login-screen');
+  const adminScreen = document.getElementById('admin-screen');
+  const stepCorreo = document.getElementById('step-correo');
+  const stepCodigo = document.getElementById('step-codigo');
+  const inputCorreo = document.getElementById('login-correo');
+  const inputCodigo = document.getElementById('login-codigo');
+  const msgCorreo = document.getElementById('msg-correo');
+  const msgCodigo = document.getElementById('msg-codigo');
+  let usuarioActual = null;
+
+  function mostrarMsg(el, texto, tipo) {
+    el.textContent = texto;
+    el.className = 'msg ' + (tipo || '');
+  }
+
+  // Solicitar código
+  document.getElementById('btn-solicitar').addEventListener('click', function() {
+    const correo = inputCorreo.value.trim();
+    if (!correo || !correo.includes('@')) {
+      mostrarMsg(msgCorreo, '⚠️ Ingresa un correo electrónico válido.', 'error');
+      return;
+    }
+    const btn = this;
+    btn.disabled = true;
+    btn.textContent = '⏳ Enviando...';
+    mostrarMsg(msgCorreo, '📤 Enviando código a ' + correo + '...', 'info');
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        btn.disabled = false;
+        btn.textContent = 'Enviar código de acceso';
+        stepCorreo.classList.remove('active');
+        stepCodigo.classList.add('active');
+        inputCodigo.value = '';
+        inputCodigo.focus();
+        mostrarMsg(msgCodigo, '📩 Código enviado a ' + correo + '. Revisa tu bandeja de entrada.', 'success');
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Enviar código de acceso';
+        mostrarMsg(msgCorreo, '❌ ' + err.message, 'error');
+      })
+      .solicitarCodigoAcceso(correo);
+  });
+
+  // Verificar código
+  document.getElementById('btn-verificar').addEventListener('click', function() {
+    const correo = inputCorreo.value.trim();
+    const codigo = inputCodigo.value.trim();
+    if (!codigo || codigo.length !== 6) {
+      mostrarMsg(msgCodigo, '⚠️ Ingresa el código de 6 dígitos.', 'error');
+      return;
+    }
+    const btn = this;
+    btn.disabled = true;
+    btn.textContent = '⏳ Verificando...';
+    mostrarMsg(msgCodigo, '🔍 Verificando código...', 'info');
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        btn.disabled = false;
+        btn.textContent = 'Verificar y acceder';
+        usuarioActual = { correo: correo, nombre: res.nombre };
+        sessionStorage.setItem('admin_auth', JSON.stringify(usuarioActual));
+        mostrarAdmin();
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Verificar y acceder';
+        mostrarMsg(msgCodigo, '❌ ' + err.message, 'error');
+        inputCodigo.value = '';
+        inputCodigo.focus();
+      })
+      .verificarCodigoAcceso(correo, codigo);
+  });
+
+  // Reenviar
+  document.getElementById('btn-reenviar').addEventListener('click', function() {
+    stepCodigo.classList.remove('active');
+    stepCorreo.classList.add('active');
+    mostrarMsg(msgCorreo, '', '');
+    document.getElementById('btn-solicitar').click();
+  });
+
+  // Cambiar correo
+  document.getElementById('btn-cambiar').addEventListener('click', function() {
+    stepCodigo.classList.remove('active');
+    stepCorreo.classList.add('active');
+    mostrarMsg(msgCorreo, '', '');
+    inputCorreo.focus();
+  });
+
+  // Logout
+  document.getElementById('btn-logout').addEventListener('click', function() {
+    sessionStorage.removeItem('admin_auth');
+    usuarioActual = null;
+    location.reload();
+  });
+
+  // Enter en inputs
+  inputCorreo.addEventListener('keydown', function(e) { if(e.key === 'Enter') document.getElementById('btn-solicitar').click(); });
+  inputCodigo.addEventListener('keydown', function(e) { if(e.key === 'Enter') document.getElementById('btn-verificar').click(); });
+  inputCodigo.addEventListener('input', function() { this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6); });
+
+  // Mostrar admin
+  function mostrarAdmin() {
+    loginScreen.style.display = 'none';
+    adminScreen.classList.add('active');
+    document.getElementById('admin-nombre').textContent = usuarioActual ? usuarioActual.nombre : '';
+    inicializarPanelAdmin();
+  }
+
+  // Verificar sesión
+  (function() {
+    const auth = sessionStorage.getItem('admin_auth');
+    if (auth) {
+      try {
+        usuarioActual = JSON.parse(auth);
+        if (usuarioActual && usuarioActual.correo) {
+          google.script.run
+            .withSuccessHandler(function(check) {
+              if (check && check.autorizado) {
+                usuarioActual.nombre = check.nombre || usuarioActual.nombre;
+                mostrarAdmin();
+              } else {
+                sessionStorage.removeItem('admin_auth');
+              }
+            })
+            .withFailureHandler(function() {
+              mostrarAdmin(); // Offline mode
+            })
+            .esUsuarioActivo(usuarioActual.correo);
+        }
+      } catch(e) { sessionStorage.removeItem('admin_auth'); }
+    }
+  })();
+
+  // ==================== PANEL ADMIN ====================
+  function inicializarPanelAdmin() {
+    // Tabs
+    document.querySelectorAll('.tabs button').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        document.getElementById(this.getAttribute('data-tab')).classList.add('active');
+        if(this.getAttribute('data-tab') === 'tab-registrar' && window._map) window._map.invalidateSize();
+      });
+    });
+
+    // Mapa
+    const map = L.map('map', { tap:true }).setView([32.62476, -115.45389], 12);
+    window._map = map;
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+    }).addTo(map);
+
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(
+        p => map.setView([p.coords.latitude, p.coords.longitude], 12),
+        () => {},
+        { enableHighAccuracy:true, timeout:5000 }
+      );
+    }
+
+    let marker = null, pendingLatLng = null;
+    const latInput = document.getElementById('lat-input');
+    const lngInput = document.getElementById('lng-input');
+    const latDisplay = document.getElementById('lat-display');
+    const lngDisplay = document.getElementById('lng-display');
+
+    function setMarker(lat, lng, panTo){
+      lat=parseFloat(lat); lng=parseFloat(lng);
+      if(isNaN(lat)||isNaN(lng)) return;
+      if(marker){ marker.setLatLng([lat,lng]); }
+      else {
+        marker = L.marker([lat,lng], {draggable:true}).addTo(map);
+        marker.on('drag', e => { latDisplay.textContent = e.target.getLatLng().lat.toFixed(6); lngDisplay.textContent = e.target.getLatLng().lng.toFixed(6); latInput.value = e.target.getLatLng().lat.toFixed(6); lngInput.value = e.target.getLatLng().lng.toFixed(6); });
+      }
+      if(panTo) map.setView([lat,lng], Math.max(map.getZoom(),15));
+      latDisplay.textContent = lat.toFixed(6);
+      lngDisplay.textContent = lng.toFixed(6);
+      latInput.value = lat.toFixed(6);
+      lngInput.value = lng.toFixed(6);
+    }
+
+    map.on('click', e => {
+      pendingLatLng = e.latlng;
+      L.popup({ closeButton:false, autoClose:true, closeOnClick:false })
+        .setLatLng(e.latlng)
+        .setContent('<div style="font-family:Inter,sans-serif;text-align:center;padding:4px;"><p style="margin:0 0 8px;font-weight:600;">¿Colocar lote aquí?</p><button onclick="window.__ok()" style="padding:6px 12px;margin-right:4px;background:#1B2A4A;color:#fff;border:none;border-radius:3px;cursor:pointer;">✅ Sí</button><button onclick="window.__no()" style="padding:6px 12px;background:#fff;border:1px solid #1B2A4A;border-radius:3px;cursor:pointer;">❌ No</button></div>')
+        .openOn(map);
+    });
+    window.__ok = function(){ if(pendingLatLng) setMarker(pendingLatLng.lat, pendingLatLng.lng, false); map.closePopup(); };
+    window.__no = function(){ map.closePopup(); };
+
+    [latInput, lngInput].forEach(el => el.addEventListener('change', () => {
+      if(latInput.value && lngInput.value) setMarker(latInput.value, lngInput.value, true);
+    }));
+
+    function colorEstado(e){
+      switch((e||'').toLowerCase()){
+        case 'disponible': return '#3E7A4C';
+        case 'vendido': return '#8A2B2B';
+        case 'apartado': return '#B8842B';
+        case 'en juridico': return '#5B4B8A';
+        default: return '#334268';
+      }
+    }
+
+    let lotesLayer = L.layerGroup().addTo(map);
+    function pintarLotes(lotes){
+      lotesLayer.clearLayers();
+      lotes.forEach(l => {
+        const lat=parseFloat(l.lat), lng=parseFloat(l.lng);
+        if(isNaN(lat)||isNaN(lng)) return;
+        let pop = '<span style="font-family:JetBrains Mono;font-size:.65rem;color:#C89B3C;font-weight:700;">#'+(l.idHoja1||'')+'</span><br><b>'+(l.codigolote||'Sin nombre')+'</b><br>Estado: '+(l.estado||'-')+'<br>Pago: '+(l.tipopago||'-')+'<br>Valor: $'+(l.valor||'-')+'<br>'+(l.metros||'-')+' m² · '+(l.medida||'-');
+        if(l.fotolote) pop += '<br><img src="https://drive.google.com/thumbnail?id='+l.fotolote+'" style="width:100%;max-width:200px;border-radius:4px;margin-top:6px;">';
+        L.circleMarker([lat,lng], { radius:8, color:'#1B2A4A', weight:1.5, fillColor:colorEstado(l.estado), fillOpacity:.9 }).addTo(lotesLayer).bindPopup(pop);
+      });
+    }
+    google.script.run.withSuccessHandler(pintarLotes).obtenerLotes();
+
+    // Foto
+    let fotoLoteBase64 = '';
+    document.getElementById('fotolote').addEventListener('change', function(){
+      const file = this.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e){
+        fotoLoteBase64 = e.target.result.split(',')[1];
+        document.getElementById('preview-lote').src = e.target.result;
+        document.getElementById('preview-lote').style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Guardar lote
+    document.getElementById('btn-guardar').addEventListener('click', function(){
+      const s = document.getElementById('status-msg');
+      if(!latInput.value || !lngInput.value){ s.textContent='⚠️ Falta ubicación.'; s.style.color='#8A2B2B'; return; }
+      this.disabled = true;
+      s.style.color='#334268'; s.textContent='⏳ Guardando...';
+
+      function guardar(fotoId){
+        google.script.run
+          .withSuccessHandler(res => {
+            s.style.color='#3E7A4C'; s.textContent='✅ #'+res.idHoja1+' '+res.codigo+' guardado.';
+            document.getElementById('btn-guardar').disabled = false;
+            document.getElementById('codigolote').value = '';
+            document.getElementById('preview-lote').style.display = 'none';
+            document.getElementById('fotolote').value = '';
+            fotoLoteBase64 = '';
+            google.script.run.withSuccessHandler(pintarLotes).obtenerLotes();
+          })
+          .withFailureHandler(err => { s.style.color='#8A2B2B'; s.textContent='❌ '+err.message; document.getElementById('btn-guardar').disabled = false; })
+          .guardarLote({
+            codigolote: document.getElementById('codigolote').value.trim(),
+            tipopago: document.getElementById('tipopago').value,
+            estado: document.getElementById('estado').value,
+            valor: document.getElementById('valor').value,
+            metros: document.getElementById('metros').value,
+            medida: document.getElementById('medida').value.trim(),
+            lat: latInput.value,
+            lng: lngInput.value,
+            fotolote: fotoId || ''
+          });
+      }
+
+      if(fotoLoteBase64){
+        google.script.run.withSuccessHandler(guardar).subirFotoBase64(fotoLoteBase64, 'lote_'+Date.now());
+      } else {
+        guardar('');
+      }
+    });
+
+    // Generar visor (botón placeholder - conecta con tu función existente)
+    document.getElementById('btn-generar-visor').addEventListener('click', function(){
+      alert('✅ Función de generar visor conectada.\nUsa tu función generarVisorHTML() existente.');
+      // Aquí iría tu lógica de generarVisorHTML
+    });
+  }
+</script>
+
+</body>
+</html>
