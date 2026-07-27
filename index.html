@@ -309,13 +309,14 @@ const map = L.map('map', { tap:true, zoomControl:false }).setView([CENTRO_VISOR_
   
   const mapStatusVisor = document.getElementById('map-status');
   function ocultarStatusVisor(){ if(mapStatusVisor){ mapStatusVisor.style.opacity='0'; setTimeout(()=>mapStatusVisor.remove(),300); } }
-  if(navigator.geolocation){
+if(navigator.geolocation){
     navigator.geolocation.getCurrentPosition(
-      p => { map.setView([p.coords.latitude, p.coords.longitude], 15); ocultarStatusVisor(); },
+      p => { ocultarStatusVisor(); },
       () => { if(mapStatusVisor){ mapStatusVisor.textContent='Mostrando zona de los lotes'; } setTimeout(ocultarStatusVisor, 2000); },
       { enableHighAccuracy:true, timeout:8000, maximumAge:0 }
     );
-  } else {
+  }
+  else {
     ocultarStatusVisor();
   }
 
