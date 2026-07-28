@@ -214,6 +214,8 @@
 <script>
   // ====== LOGIN ======
  // ====== LOGIN ======
+var API_URL = 'https://script.google.com/macros/s/AKfycbyEsQ878-r8KeLeZ4dOvHPN0bCohS23G-KM2ckDy-MjWLsyr8tvN2jPNiaTQycG3Ws/exec';
+
 document.getElementById('btn-entrar').addEventListener('click', function() {
   var correo = document.getElementById('login-email').value.trim().toLowerCase();
   var password = document.getElementById('login-password').value;
@@ -226,42 +228,42 @@ document.getElementById('btn-entrar').addEventListener('click', function() {
     msg.style.color = '#8A2B2B'; msg.textContent = '⚠️ Ingresa tu contraseña.'; return;
   }
 
-this.disabled = true;
+  this.disabled = true;
   msg.style.color = '#334268'; msg.textContent = '⏳ Verificando...';
 
-  google.script.run
-    .withSuccessHandler(function(datos) {
-      var debug = document.getElementById('debug-usuario');
-      debug.style.display = 'block';
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: 'verificarLogin', correo: correo, password: password })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(res) {
+    if (!res.ok) throw new Error(res.error);
+    var datos = res.data;
 
-      var html = '✅ Fila completa leída de la hoja Usuarios:<br>';
-      if (datos.filaCompleta) {
-        Object.keys(datos.filaCompleta).forEach(function(campo) {
-          var valor = datos.filaCompleta[campo];
-          if (campo === 'password') valor = '••••••• (oculto)';
-          html += '· ' + campo + ': <b>' + (valor || '—') + '</b><br>';
-        });
-      } else {
-        html += '⚠️ No llegó filaCompleta (falta actualizar Login.gs)';
-      }
-      debug.innerHTML = html;
+    var debug = document.getElementById('debug-usuario');
+    debug.style.display = 'block';
+    var html = '✅ Datos leídos de la hoja Usuarios:<br>';
+    if (datos.filaCompleta) {
+      Object.keys(datos.filaCompleta).forEach(function(campo) {
+        var valor = datos.filaCompleta[campo];
+        if (campo === 'password') valor = '••••••• (oculto)';
+        html += '· ' + campo + ': <b>' + (valor || '—') + '</b><br>';
+      });
+    } else {
+      html += '· nombre: <b>' + (datos.nombre || '—') + '</b><br>· correo: <b>' + (datos.correo || '—') + '</b>';
+    }
+    debug.innerHTML = html;
 
-      msg.style.color = '#3E7A4C';
-      msg.textContent = '✅ Login correcto.';
-
-      setTimeout(function() {
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('panel-screen').classList.add('visible');
-        initPanel();
-      }, 1800);
-    })
-    .withFailureHandler(function(err) {
-      msg.style.color = '#8A2B2B'; msg.textContent = '❌ ' + err.message;
-      document.getElementById('btn-entrar').disabled = false;
-    })
-    .verificarLogin(correo, password);
-});
-document.getElementById('login-password').addEventListener('keydown', function(e) {
+    msg.style.color = '#3E7A4C';
+    msg.textContent = '✅ Login correcto.';
+    document.getElementById('btn-entrar').disabled = false;
+  })
+  .catch(function(err) {
+    msg.style.color = '#8A2B2B'; msg.textContent = '❌ ' + err.message;
+    document.getElementById('btn-entrar').disabled = false;
+  });
+});document.getElementById('login-password').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') document.getElementById('btn-entrar').click();
 });
   // ====== PANEL ======
