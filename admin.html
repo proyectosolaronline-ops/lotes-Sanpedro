@@ -226,14 +226,34 @@ document.getElementById('btn-entrar').addEventListener('click', function() {
     msg.style.color = '#8A2B2B'; msg.textContent = '⚠️ Ingresa tu contraseña.'; return;
   }
 
-  this.disabled = true;
+this.disabled = true;
   msg.style.color = '#334268'; msg.textContent = '⏳ Verificando...';
 
   google.script.run
-    .withSuccessHandler(function() {
-      document.getElementById('login-screen').classList.add('hidden');
-      document.getElementById('panel-screen').classList.add('visible');
-      initPanel();
+    .withSuccessHandler(function(datos) {
+      var debug = document.getElementById('debug-usuario');
+      debug.style.display = 'block';
+
+      var html = '✅ Fila completa leída de la hoja Usuarios:<br>';
+      if (datos.filaCompleta) {
+        Object.keys(datos.filaCompleta).forEach(function(campo) {
+          var valor = datos.filaCompleta[campo];
+          if (campo === 'password') valor = '••••••• (oculto)';
+          html += '· ' + campo + ': <b>' + (valor || '—') + '</b><br>';
+        });
+      } else {
+        html += '⚠️ No llegó filaCompleta (falta actualizar Login.gs)';
+      }
+      debug.innerHTML = html;
+
+      msg.style.color = '#3E7A4C';
+      msg.textContent = '✅ Login correcto.';
+
+      setTimeout(function() {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('panel-screen').classList.add('visible');
+        initPanel();
+      }, 1800);
     })
     .withFailureHandler(function(err) {
       msg.style.color = '#8A2B2B'; msg.textContent = '❌ ' + err.message;
@@ -241,7 +261,6 @@ document.getElementById('btn-entrar').addEventListener('click', function() {
     })
     .verificarLogin(correo, password);
 });
-
 document.getElementById('login-password').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') document.getElementById('btn-entrar').click();
 });
